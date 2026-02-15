@@ -19,6 +19,17 @@ class TestReporter:
             "screenshot": screenshot_path
         })
 
+    def add_browser_logs(self, logs: list):
+        """Adds browser logs to the report."""
+        if logs:
+            self.steps.append({
+                "timestamp": datetime.now(),
+                "description": "Browser Logs Captured",
+                "status": "INFO",
+                "screenshot": None,
+                "logs": logs
+            })
+
     def generate_report(self):
         """Generates the PDF report."""
         c = canvas.Canvas(self.filename, pagesize=letter)
@@ -70,6 +81,18 @@ class TestReporter:
                 except Exception as e:
                     c.drawString(100, y, f"[Error loading screenshot: {e}]")
                     y -= 20
+            
+            # Browser Logs
+            if "logs" in step and step["logs"]:
+                c.setFont("Courier", 8)
+                for log in step["logs"]:
+                    if y < 50:
+                        c.showPage()
+                        y = height - 50
+                        c.setFont("Courier", 8)
+                    c.drawString(70, y, log[:100]) # Truncate long logs
+                    y -= 12
+                y -= 10
             
             y -= 10 # Extra spacing between steps
 

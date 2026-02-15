@@ -84,6 +84,8 @@ class QEAgent:
                  os.makedirs("report_screenshots", exist_ok=True)
                  await self.browser.take_screenshot(filename)
                  self.reporter.add_step(f"Typed '{text}' into {selector}", status, filename)
+            
+            # Return result (which might be an error string)
             return result
 
         async def get_context_wrapper(x):

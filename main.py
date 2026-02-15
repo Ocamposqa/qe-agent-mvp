@@ -1,5 +1,6 @@
 import os
 import asyncio
+import argparse
 from dotenv import load_dotenv
 from agent_logic import QEAgent
 from browser_tools import BrowserManager
@@ -9,6 +10,12 @@ from reporting import TestReporter
 load_dotenv()
 
 async def main():
+    parser = argparse.ArgumentParser(description="Autonomous QE Agent (V2)")
+    parser.add_argument("--url", type=str, help="Target URL to test", default=None)
+    parser.add_argument("--instructions", type=str, help="Specific test instructions", default=None)
+    parser.add_argument("--headless", action="store_true", help="Run browser in headless mode")
+    args = parser.parse_args()
+
     if not os.getenv("OPENAI_API_KEY"):
         print("Error: OPENAI_API_KEY is missing in .env file.")
         return
@@ -16,7 +23,8 @@ async def main():
     print("Initializing Autonomous QE Agent (V2)...")
     
     # Initialize Components
-    browser_manager = BrowserManager()
+    # Pass headless argument to BrowserManager
+    browser_manager = BrowserManager(headless=args.headless)
     reporter = TestReporter("qe_agent_report.pdf")
     
     # Initialize Agent with Reporter
@@ -24,18 +32,27 @@ async def main():
 
     print("Agent Ready. Capabilities: Visual Navigation, Reporting, Human-in-the-loop.")
     
-    # Updated Instruction to test new features
-    # We purposefully add a slightly ambiguous step ("Click the generic button") 
-    # to potentially trigger AskHuman, but for automated run we stick to a robust path.
-    # To test Visual/Reporting, we run the login flow.
-    test_instruction = """
-    1. Navigate to 'https://the-internet.herokuapp.com/login'
-    2. Analyze the page.
-    3. Type 'tomsmith' into the #username field.
-    4. Type 'SuperSecretPassword!' into the #password field.
-    5. Click the Login button.
-    6. Verify success.
-    """
+    # Determine Instructions
+    if args.instructions:
+        test_instruction = args.instructions
+    elif args.url:
+        # Generic instruction if only URL is provided
+        test_instruction = f"""
+        1. Navigate to '{args.url}'
+        2. Analyze the page.
+        3. Identify main interactive elements.
+        4. Report any obvious visual bugs.
+        """
+    else:
+        # Default Login Scenario
+        test_instruction = """
+        1. Navigate to 'https://the-internet.herokuapp.com/login'
+        2. Analyze the page.
+        3. Type 'tomsmith' into the #username field.
+        4. Type 'SuperSecretPassword!' into the #password field.
+        5. Click the Login button.
+        6. Verify success.
+        """
 
     print(f"Executing Test Scenario:\n{test_instruction}")
     
@@ -49,6 +66,8 @@ async def main():
         reporter.add_step(f"Execution Error: {e}", "FAIL")
     finally:
         # Cleanup and Report
+        logs = await browser_manager.get_logs()
+        reporter.add_browser_logs(logs)
         await browser_manager.stop()
         reporter.generate_report()
         print(f"\nReport generated: {reporter.filename}")
