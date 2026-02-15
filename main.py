@@ -88,6 +88,9 @@ async def main():
         # Analyze cookies
         auditor.scan_cookies(current_cookies)
         
+        findings = auditor.get_findings()
+        reporter.add_security_findings(findings)
+        
         # 3. Cleanup and Report
         print(f"Security Findings: {len(findings)} issues detected.")
         reporter.generate_report()
