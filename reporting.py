@@ -30,47 +30,51 @@ class TestReporter:
                 "logs": logs
             })
 
-    def generate_report(self):
-        """Generates the PDF report."""
-        c = canvas.Canvas(self.filename, pagesize=letter)
+    def add_security_findings(self, findings: list):
+        """Adds security findings to the report."""
+        if findings:
+            self.steps.append({
+                "timestamp": datetime.now(),
+                "description": "Security Audit Completed",
+                "status": "INFO",
+                "screenshot": None,
+                "security_findings": findings
+            })
+
+    def generate_report(self, filename="qe_agent_report.pdf"):
+        c = canvas.Canvas(filename, pagesize=letter)
         width, height = letter
         y = height - 50
-
-        # Title
+        
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(50, y, f"QE Agent Test Report")
-        y -= 25
+        c.drawString(50, y, "QE Agent Test Report")
+        y -= 30
+        
         c.setFont("Helvetica", 10)
-        c.drawString(50, y, f"Date: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        y -= 40
-
-        # Steps
+        
         for step in self.steps:
-            if y < 100: # New page if running out of space
+            if y < 100:
                 c.showPage()
                 y = height - 50
+                
+            timestamp = step["timestamp"].strftime("%H:%M:%S")
+            # Truncate description if too long
+            desc = (step["description"][:75] + '..') if len(step["description"]) > 75 else step["description"]
             
-            # Step Text
             c.setFont("Helvetica-Bold", 10)
-            status_color = (0, 0.5, 0) if step["status"] == "PASS" else (1, 0, 0) if step["status"] == "FAIL" else (0, 0, 0)
-            c.setFillColorRGB(*status_color)
-            c.drawString(50, y, f"[{step['status']}]")
-            c.setFillColorRGB(0, 0, 0)
+            c.drawString(50, y, f"[{timestamp}] [{step['status']}] {desc}")
+            y -= 15
             
-            c.setFont("Helvetica", 10)
-            c.drawString(100, y, f"{step['timestamp'].strftime('%H:%M:%S')} - {step['description']}")
-            y -= 20
-
-            # Screenshot
+            c.setFont("Helvetica", 9)
             if step["screenshot"] and os.path.exists(step["screenshot"]):
                 try:
-                    # Resize image to fit width while maintaining aspect ratio
-                    img = ImageReader(step["screenshot"])
-                    img_width, img_height = img.getSize()
-                    aspect = img_height / float(img_width)
+                    # Draw screenshot (scaled down)
+                    img_width = 400
+                    img_height = 225
                     
-                    display_width = 400
-                    display_height = display_width * aspect
+                    # Check if we have space, else new page
+                    display_height = img_height
+                    display_width = img_width
                     
                     if y - display_height < 50:
                         c.showPage()
@@ -82,19 +86,51 @@ class TestReporter:
                     c.drawString(100, y, f"[Error loading screenshot: {e}]")
                     y -= 20
             
-            # Browser Logs
-            if "logs" in step and step["logs"]:
+            # Render Browser Logs
+            if "logs" in step:
                 c.setFont("Courier", 8)
-                for log in step["logs"]:
+                c.drawString(70, y, "Captured Logs:")
+                y -= 10
+                for log in step["logs"][-10:]: # Show last 10 logs
                     if y < 50:
                         c.showPage()
                         y = height - 50
-                        c.setFont("Courier", 8)
-                    c.drawString(70, y, log[:100]) # Truncate long logs
-                    y -= 12
+                    # Sanitize log line to avoid PDF errors
+                    safe_log = log.encode('latin-1', 'replace').decode('latin-1')
+                    c.drawString(80, y, safe_log[:100])
+                    y -= 10
                 y -= 10
             
-            y -= 10 # Extra spacing between steps
+            # Render Security Findings
+            if "security_findings" in step:
+                c.setFont("Helvetica-Bold", 11)
+                c.setFillColorRGB(0.8, 0, 0) # Red color
+                c.drawString(70, y, "Security Insights (Passive Scan):")
+                c.setFillColorRGB(0, 0, 0) # Reset color
+                y -= 15
+                c.setFont("Helvetica", 9)
+                
+                for finding in step["security_findings"]:
+                    if y < 60:
+                        c.showPage()
+                        y = height - 50
+                    
+                    severity = finding.get('severity', 'Info')
+                    title = finding.get('type', 'Finding')
+                    details = finding.get('details', '')
+                    remediation = finding.get('remediation', '')
+                    
+                    c.setFont("Helvetica-Bold", 9)
+                    c.drawString(80, y, f"[{severity}] {title}")
+                    y -= 12
+                    c.setFont("Helvetica", 9)
+                    c.drawString(90, y, f"Details: {details}")
+                    y -= 12
+                    c.setFont("Helvetica-Oblique", 8)
+                    c.drawString(90, y, f"Remediation: {remediation}")
+                    y -= 20
 
+            y -= 10
+            
         c.save()
-        print(f"Report generated: {self.filename}")
+        print(f"Report generated: {filename}")

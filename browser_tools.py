@@ -9,6 +9,7 @@ class BrowserManager:
         self.page = None
         self.headless = headless
         self.logs = []
+        self.responses = []
 
     async def start(self):
         """Initializes the browser instance."""
@@ -23,9 +24,19 @@ class BrowserManager:
             # Capture failed network requests
             self.page.on("requestfailed", lambda request: self.logs.append(f"[NETWORK] Failed: {request.url} - {request.failure}"))
 
-    async def get_logs(self):
-        """Returns captured browser logs."""
-        return self.logs
+            # Capture all network responses for security analysis
+            async def handle_response(response):
+                try:
+                    headers = await response.all_headers()
+                    self.responses.append({
+                        "url": response.url,
+                        "status": response.status,
+                        "headers": headers
+                    })
+                except Exception as e:
+                    pass # Ignore errors during capture to avoid noise
+
+            self.page.on("response", handle_response)
 
     async def navigate(self, url: str) -> dict:
         """Navigates to a specific URL and returns the simplified DOM."""
@@ -53,11 +64,11 @@ class BrowserManager:
             return f"Failed to click element: {str(e)}"
 
     async def type_text(self, selector: str, text: str) -> str:
-        """Types text into an element."""
+        """Types text into an element based on a CSS selector."""
         if not self.page:
             return "Error: Browser not started."
         try:
-            await self.page.fill(selector, text)
+            await self.page.fill(selector, text, timeout=5000)
             return f"Successfully typed '{text}' into {selector}"
         except Exception as e:
             return f"Failed to type text: {str(e)}"
@@ -129,9 +140,23 @@ class BrowserManager:
         if self.page:
             await self.page.screenshot(path=filename)
 
-    async def stop(self):
+    async def close(self):
         """Closes the browser."""
         if self.browser:
             await self.browser.close()
         if self.playwright:
             await self.playwright.stop()
+
+    async def get_logs(self):
+        """Returns captured browser logs."""
+        return self.logs
+        
+    async def get_responses(self):
+        """Returns captured network responses."""
+        return getattr(self, 'responses', [])
+
+    async def get_cookies(self):
+        """Returns all cookies from the current context."""
+        if self.page:
+            return await self.page.context.cookies()
+        return []

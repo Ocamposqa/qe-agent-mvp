@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Vulnerable App</title>
+</head>
+
+<body>
+    <h1>Welcome to the Vulnerable App</h1>
+    <p>This page lacks security headers and sets an insecure cookie.</p>
+    <button id="login-btn">Login (Reflected XSS Source)</button>
+    <script>
+        // Set an insecure cookie (no Secure, no HttpOnly, no SameSite)
+        document.cookie = "session_id=123456; path=/";
+        console.log("Insecure cookie set.");
+    </script>
+</body>
+
+</html>
