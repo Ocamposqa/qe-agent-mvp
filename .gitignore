@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# Reports and Screenshots
+*.pdf
+report_screenshots/
+output.txt
+debug_output.txt
+run_output.txt
+error.log
+
+# IDE
+.vscode/
+.idea/
