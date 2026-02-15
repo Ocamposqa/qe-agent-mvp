@@ -27,6 +27,8 @@ class QEAgent:
                 self.reporter.add_step(f"Human Answered: {answer}", "INFO")
             return answer
 
+        import uuid
+
         async def navigate_wrapper(url: str):
             print(f"[DEBUG] navigate_wrapper called with {url}")
             result = await self.browser.navigate(url)
@@ -34,7 +36,8 @@ class QEAgent:
             # Log step
             if self.reporter:
                 # We can take a dedicated screenshot for the report
-                filename = f"report_screenshots/step_{len(self.reporter.steps)}.jpg"
+                step_uuid = str(uuid.uuid4())[:8]
+                filename = f"report_screenshots/step_{len(self.reporter.steps)}_{step_uuid}.jpg"
                 import os
                 os.makedirs("report_screenshots", exist_ok=True)
                 await self.browser.take_screenshot(filename)
@@ -46,11 +49,13 @@ class QEAgent:
             return result
 
         async def click_wrapper(selector: str):
+            print(f"[DEBUG] click_wrapper received: {selector}")
             result = await self.browser.click_element(selector)
             if self.reporter:
                 # Capture result
                 status = "PASS" if "Successfully" in result else "FAIL"
-                filename = f"report_screenshots/step_{len(self.reporter.steps)}.jpg"
+                step_uuid = str(uuid.uuid4())[:8]
+                filename = f"report_screenshots/step_{len(self.reporter.steps)}_{step_uuid}.jpg"
                 import os
                 os.makedirs("report_screenshots", exist_ok=True)
                 await self.browser.take_screenshot(filename)
@@ -58,11 +63,23 @@ class QEAgent:
             return result
 
         async def type_wrapper(input_str: str):
-            selector, text = input_str.split("|", 1)
-            result = await self.browser.type_text(selector, text)
+            print(f"[DEBUG] type_wrapper received: {input_str}")
+            try:
+                if "|" in input_str:
+                    selector, text = input_str.split("|", 1)
+                else:
+                    return "Error: Input must be in format 'selector|text', e.g., '#username|myuser'"
+                
+                result = await self.browser.type_text(selector, text)
+                print(f"[DEBUG] type_wrapper result: {result}")
+            except Exception as e:
+                err_msg = f"Error processing input '{input_str}': {e}"
+                print(f"[DEBUG] type_wrapper exception: {err_msg}")
+                return err_msg
             if self.reporter:
                  status = "PASS" if "Successfully" in result else "FAIL"
-                 filename = f"report_screenshots/step_{len(self.reporter.steps)}.jpg"
+                 step_uuid = str(uuid.uuid4())[:8]
+                 filename = f"report_screenshots/step_{len(self.reporter.steps)}_{step_uuid}.jpg"
                  import os
                  os.makedirs("report_screenshots", exist_ok=True)
                  await self.browser.take_screenshot(filename)
@@ -114,10 +131,13 @@ Your goal is to test web applications.
 - If the DOM is confusing or you are stuck, use the 'AskHuman' tool.
 - When validating, look for success messages or specific element states.
 - If you find a bug, report it.
+- CRITICAL: Execute tools sequentially. Do NOT output multiple tool calls in a single response. Wait for the result of one action before sending the next.
 """
         # Using langgraph prebuilt agent
+        # We bind tools with parallel_tool_calls=False to force sequential execution
+        model_with_tools = self.llm.bind_tools(self.tools, parallel_tool_calls=False)
         return create_react_agent(
-            self.llm,
+            model_with_tools,
             self.tools,
             prompt=system_message,
         )
