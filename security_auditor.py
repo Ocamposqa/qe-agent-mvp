@@ -1,4 +1,4 @@
-
+import asyncio
 from typing import List, Dict, Any
 
 class SecurityAuditor:
@@ -56,6 +56,59 @@ class SecurityAuditor:
                     "details": f"Cookie '{name}' has weak 'SameSite' policy ({same_site}).",
                     "remediation": "Set 'SameSite' to 'Lax' or 'Strict' to mitigate CSRF."
                 })
+
+    async def active_scan(self, browser_manager):
+        """Performs active scanning (fuzzing) on identified inputs."""
+        inputs = await browser_manager.get_input_elements()
+        if not inputs:
+            return
+
+        print(f"Starting Active Scan on {len(inputs)} inputs...")
+
+        for input_elem in inputs:
+            selector = input_elem['selector']
+            print(f"Fuzzing input: {selector}")
+
+            # 1. Reflected XSS Test
+            xss_payload = "<script>console.log('XSS_TEST')</script>"
+            await browser_manager.type_text(selector, xss_payload)
+            # Try to trigger it (press Enter)
+            await browser_manager.press_key(selector, "Enter")
+            
+            # Allow time for processing
+            await asyncio.sleep(1)
+            
+            # Check for reflection (Basic)
+            # Use get_content to see raw HTML (including scripts that get_simplified_dom might remove)
+            page_content = await browser_manager.get_content()
+            
+            # If the payload appears unescaped in the HTML, it's a likely vulnerability.
+            if xss_payload in page_content:
+                 self.findings.append({
+                    "severity": "High",
+                    "type": "Reflected Input (Potential XSS)",
+                    "details": f"Input at {selector} reflects injected values without escaping: {xss_payload}",
+                    "remediation": "Ensure all user input is output encoded."
+                })
+
+            # 2. SQL Injection Test (Basic)
+            sqli_payload = "' OR '1'='1"
+            await browser_manager.type_text(selector, sqli_payload)
+            await browser_manager.press_key(selector, "Enter")
+            await asyncio.sleep(1)
+            
+            # Re-fetch content for SQLi check
+            page_content_sqli = await browser_manager.get_content()
+            
+            sql_errors = ["syntax error", "mysql", "sql syntax", "unrecognized token"]
+            for err in sql_errors:
+                if err in page_content_sqli.lower():
+                    self.findings.append({
+                        "severity": "Critical",
+                        "type": "SQL Injection Susceptibility",
+                        "details": f"Input at {selector} caused a potential database error: '{err}'",
+                        "remediation": "Use parameterized queries to prevent SQL injection."
+                    })
 
     def get_findings(self) -> List[Dict[str, Any]]:
         return self.findings

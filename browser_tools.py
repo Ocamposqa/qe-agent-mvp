@@ -73,6 +73,16 @@ class BrowserManager:
         except Exception as e:
             return f"Failed to type text: {str(e)}"
 
+    async def press_key(self, selector: str, key: str) -> str:
+        """Presses a specific key on an element."""
+        if not self.page:
+            return "Error: Browser not started."
+        try:
+            await self.page.press(selector, key, timeout=5000)
+            return f"Successfully pressed '{key}' on {selector}"
+        except Exception as e:
+            return f"Failed to press key: {str(e)}"
+
     async def get_simplified_dom(self) -> dict:
         """Returns a simplified version of the DOM for the LLM and a screenshot."""
         if not self.page:
@@ -140,6 +150,12 @@ class BrowserManager:
         if self.page:
             await self.page.screenshot(path=filename)
 
+    async def get_content(self) -> str:
+        """Returns the raw HTML content of the page."""
+        if self.page:
+            return await self.page.content()
+        return ""
+
     async def close(self):
         """Closes the browser."""
         if self.browser:
@@ -160,3 +176,48 @@ class BrowserManager:
         if self.page:
             return await self.page.context.cookies()
         return []
+
+    async def get_input_elements(self) -> list:
+        """Returns a list of input elements for active scanning."""
+        if not self.page:
+            return []
+        
+        inputs = []
+        try:
+            # Find all input and textarea elements
+            elements = await self.page.query_selector_all("input, textarea")
+            for element in elements:
+                # Skip hidden or submit/button inputs
+                type_attr = await element.get_attribute("type")
+                if type_attr in ["hidden", "submit", "button", "image", "reset"]:
+                    continue
+                
+                # specific checks for visibility could be added here
+                if not await element.is_visible():
+                    continue
+
+                # Construct a selector
+                # Priority: id > name > others
+                elem_id = await element.get_attribute("id")
+                elem_name = await element.get_attribute("name")
+                
+                selector = ""
+                if elem_id:
+                    selector = f"#{elem_id}"
+                elif elem_name:
+                    selector = f"[name='{elem_name}']"
+                else:
+                    # Fallback to a less robust selector or skip
+                    # leveraging playwright's locator logic would be better but simple CSS for now
+                    continue 
+
+                inputs.append({
+                    "selector": selector,
+                    "type": type_attr or "text",
+                    "name": elem_name,
+                    "id": elem_id
+                })
+        except Exception as e:
+            self.logs.append(f"[ERROR] Failed to get input elements: {str(e)}")
+            
+        return inputs

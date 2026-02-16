@@ -86,7 +86,12 @@ async def main():
                 analyzed_urls.add(url)
                 
         # Analyze cookies
+        # Analyze cookies
         auditor.scan_cookies(current_cookies)
+        
+        # Run Security Audit (Active Phase)
+        print("\nRunning Security Audit (Active Scan - Fuzzing)...")
+        await auditor.active_scan(browser_manager)
         
         findings = auditor.get_findings()
         reporter.add_security_findings(findings)

@@ -9,7 +9,24 @@
     <h1>Welcome to the Vulnerable App</h1>
     <p>This page lacks security headers and sets an insecure cookie.</p>
     <button id="login-btn">Login (Reflected XSS Source)</button>
+
+    <hr>
+    <h3>Vulnerable Search</h3>
+    <input type="text" id="search" name="q" placeholder="Enter search term...">
+    <div id="results"></div>
+
     <script>
+        // Simple Reflected XSS Simulation
+        const searchInput = document.getElementById('search');
+        const resultsDiv = document.getElementById('results');
+
+        searchInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                // VULNERABILITY: Directly setting innerHTML without escaping
+                resultsDiv.innerHTML = "You searched for: " + searchInput.value;
+            }
+        });
+
         // Set an insecure cookie (no Secure, no HttpOnly, no SameSite)
         document.cookie = "session_id=123456; path=/";
         console.log("Insecure cookie set.");
