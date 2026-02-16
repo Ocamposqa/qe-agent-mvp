@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>QE Agent Test Suite</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>QE Agent Comprehensive Test Suite</h1>
+    <p>This page contains various elements to test the agent's functional and security capabilities.</p>
+
+    <!-- 1. Navigation & Interactions -->
+    <div class="section" id="functional-section">
+        <h2>1. Functional Testing</h2>
+        <p>Test clicking, typing, and state changes.</p>
+
+        <div id="login-form">
+            <input type="text" id="username" placeholder="Username" data-testid="user-input">
+            <input type="password" id="password" placeholder="Password" data-testid="pass-input">
+            <button id="login-btn" onclick="attemptLogin()">Login</button>
+            <p id="login-msg"></p>
+        </div>
+
+        <button id="toggle-btn" onclick="toggleContent()" style="margin-top: 10px;">Show Hidden Message</button>
+        <div id="hidden-content" class="hidden">
+            <p>This is dynamic content.</p>
+        </div>
+    </div>
+
+    <!-- 2. Security Vulnerabilities -->
+    <div class="section" id="security-section">
+        <h2>2. Security Testing</h2>
+        <p>Test passive and active scanning.</p>
+
+        <!-- Reflected XSS -->
+        <div id="xss-area">
+            <label>Search (Reflected):</label>
+            <input type="text" id="search-box" name="q">
+            <button id="search-btn" onclick="doSearch()">Search</button>
+            <div id="search-results"></div>
+        </div>
+
+        <!-- Sensitive Info Exposure -->
+        <div id="sensitive-info" style="margin-top: 20px;">
+            <p>Debug Info: API_KEY=12345-SECRET-KEY</p> <!-- Agent should flag this via 'Security Mindset' -->
+        </div>
+    </div>
+
+    <script>
+        // Set insecure cookie for Passive Scan
+        document.cookie = "session_token=abc-123; path=/"; // Missing Secure, HttpOnly, SameSite
+
+        function attemptLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const msg = document.getElementById('login-msg');
+
+            if (user === 'admin' && pass === 'password') {
+                msg.textContent = "Login Successful!";
+                msg.className = "success";
+            } else {
+                msg.textContent = "Invalid Credentials";
+                msg.className = "error";
+            }
+        }
+
+        function toggleContent() {
+            const el = document.getElementById('hidden-content');
+            el.classList.toggle('hidden');
+        }
+
+        function doSearch() {
+            const query = document.getElementById('search-box').value;
+            const results = document.getElementById('search-results');
+            // Vulnerable: innerHTML reflection
+            results.innerHTML = "Results for: " + query;
+        }
+    </script>
+</body>
+
+</html>

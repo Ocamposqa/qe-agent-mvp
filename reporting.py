@@ -108,6 +108,17 @@ class TestReporter:
                 c.drawString(70, y, "Security Insights (Passive Scan):")
                 c.setFillColorRGB(0, 0, 0) # Reset color
                 y -= 15
+                # Calculate summary
+                counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0}
+                for f in step["security_findings"]:
+                    sev = f.get('severity', 'Info')
+                    counts[sev] = counts.get(sev, 0) + 1
+                
+                summary_text = f"Summary: Critical: {counts['Critical']}, High: {counts['High']}, Medium: {counts['Medium']}, Low: {counts['Low']}"
+                c.setFont("Helvetica-Oblique", 10)
+                c.drawString(70, y, summary_text)
+                y -= 20
+                
                 c.setFont("Helvetica", 9)
                 
                 for finding in step["security_findings"]:

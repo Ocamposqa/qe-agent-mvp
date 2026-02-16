@@ -35,7 +35,9 @@ async def main():
     print("Agent Ready. Capabilities: Visual Navigation, Reporting, Human-in-the-loop.")
     
     # Determine Instructions
-    if args.instructions:
+    if args.instructions and args.url:
+        test_instruction = f"1. Navigate to '{args.url}'\n2. {args.instructions}"
+    elif args.instructions:
         test_instruction = args.instructions
     elif args.url:
         # Generic instruction if only URL is provided
@@ -68,45 +70,48 @@ async def main():
         print(f"\nError during execution: {e}")
         reporter.add_step(f"Execution Error: {e}", "FAIL")
     finally:
-        # 1. Capture Browser Logs
-        logs = await browser_manager.get_logs()
-        reporter.add_browser_logs(logs)
+        try:
+            # 1. Capture Browser Logs
+            logs = await browser_manager.get_logs()
+            reporter.add_browser_logs(logs)
 
-        # 2. Run Security Audit (Passive Phase)
-        print("\nRunning Security Audit (Passive Scan)...")
-        visited_responses = await browser_manager.get_responses()
-        current_cookies = await browser_manager.get_cookies()
-        
-        # Analyze headers for unique URLs visited
-        analyzed_urls = set()
-        for response in visited_responses:
-            url = response['url']
-            if url not in analyzed_urls and response['status'] == 200:
-                auditor.scan_headers(url, response['headers'])
-                analyzed_urls.add(url)
-                
-        # Analyze cookies
-        # Analyze cookies
-        auditor.scan_cookies(current_cookies)
-        
-        # Run Security Audit (Active Phase)
-        print("\nRunning Security Audit (Active Scan - Fuzzing)...")
-        await auditor.active_scan(browser_manager)
-        
-        findings = auditor.get_findings()
-        reporter.add_security_findings(findings)
-        
-        # 3. Cleanup and Report
-        print(f"Security Findings: {len(findings)} issues detected.")
-        reporter.generate_report()
-        print(f"Report generated: {reporter.filename}")
-        
-        await browser_manager.close()
-        
-        if os.path.exists("report_screenshots"):
-            print(f"Screenshots captured: {len(os.listdir('report_screenshots'))}")
-        else:
-            print("No screenshots captured (directory missing).")
+            # 2. Run Security Audit (Passive Phase)
+            print("\nRunning Security Audit (Passive Scan)...")
+            visited_responses = await browser_manager.get_responses()
+            current_cookies = await browser_manager.get_cookies()
+            
+            # Analyze headers for unique URLs visited
+            analyzed_urls = set()
+            for response in visited_responses:
+                url = response['url']
+                if url not in analyzed_urls and response['status'] == 200:
+                    auditor.scan_headers(url, response['headers'])
+                    analyzed_urls.add(url)
+            
+            # Analyze cookies
+            auditor.scan_cookies(current_cookies)
+            
+            # Run Security Audit (Active Phase)
+            print("\nRunning Security Audit (Active Scan - Fuzzing)...")
+            await auditor.active_scan(browser_manager)
+            
+            findings = auditor.get_findings()
+            reporter.add_security_findings(findings)
+            
+            # 3. Cleanup and Report
+            print(f"Security Findings: {len(findings)} issues detected.")
+            reporter.generate_report()
+            print(f"Report generated: {reporter.filename}")
+            
+            await browser_manager.close()
+            
+            if os.path.exists("report_screenshots"):
+                print(f"Screenshots captured: {len(os.listdir('report_screenshots'))}")
+            else:
+                print("No screenshots captured (directory missing).")
+
+        except Exception as e:
+            print(f"Error during shutdown/reporting: {e}")
 
 if __name__ == "__main__":
     os.environ["LANGCHAIN_TRACING_V2"] = "false"
