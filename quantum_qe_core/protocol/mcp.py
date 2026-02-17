@@ -6,12 +6,12 @@ class MCPTool(ABC):
     @abstractmethod
     def name(self) -> str:
         """Helper to return tool name."""
-        pass
+        raise NotImplementedError
     
     @abstractmethod
     def description(self) -> str:
         """Helper to return tool description."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def execute(self, **kwargs):
@@ -27,7 +27,8 @@ class JiraConnector(MCPTool):
     def description(self):
         return "Creates a new issue in JIRA."
         
-    def execute(self, summary, description):
+    def execute(self, **kwargs):
+        summary = kwargs.get('summary', 'No summary provided')
         # Implementation to come
         print(f"[MCP-Mock] Jira Issue Created: {summary}")
         return {"id": "JIRA-123", "status": "created"}
