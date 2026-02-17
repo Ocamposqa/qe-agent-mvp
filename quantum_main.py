@@ -15,7 +15,7 @@ load_dotenv()
 
 async def main():
     parser = argparse.ArgumentParser(description="Quantum QE Core (Enterprise Architecture)")
-    parser.add_argument("--url", type=str, help="Target URL", default="http://localhost:8000/test_suite_app.html")
+    parser.add_argument("--url", type=str, help="Target URL", default="http://localhost:8000/tests/test_suite_app.html")
     parser.add_argument("--instructions", type=str, help="Functional Test Instructions", default="Login as admin/password and search for XSS payload.")
     parser.add_argument("--headless", action="store_true", help="Run headless")
     args = parser.parse_args()
@@ -27,8 +27,9 @@ async def main():
     print("Initializing Quantum QE Core (Multi-Agent System + RAG)...")
     
     # Shared Resources (Skills)
+    # Shared Resources (Skills)
     browser = BrowserManager(headless=args.headless)
-    reporter = TestReporter("quantum_core_report.pdf")
+    reporter = TestReporter("output/quantum_core_report.pdf")
     knowledge = KnowledgeManager("quantum_qe_core/knowledge")
     
     # Initialize Agents

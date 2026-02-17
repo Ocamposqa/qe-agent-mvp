@@ -41,8 +41,11 @@ class TestReporter:
                 "security_findings": findings
             })
 
-    def generate_report(self, filename="qe_agent_report.pdf"):
-        c = canvas.Canvas(filename, pagesize=letter)
+    def generate_report(self, filename=None):
+        target_file = filename or self.filename
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(target_file) or ".", exist_ok=True)
+        c = canvas.Canvas(target_file, pagesize=letter)
         width, height = letter
         y = height - 50
         

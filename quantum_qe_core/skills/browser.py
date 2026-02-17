@@ -235,8 +235,8 @@ class BrowserManager:
             # Log step
             if reporter:
                 step_uuid = str(uuid.uuid4())[:8]
-                filename = f"report_screenshots/step_{len(reporter.steps)}_{step_uuid}.jpg"
-                os.makedirs("report_screenshots", exist_ok=True)
+                filename = f"output/report_screenshots/step_{len(reporter.steps)}_{step_uuid}.jpg"
+                os.makedirs("output/report_screenshots", exist_ok=True)
                 await self.take_screenshot(filename)
                 reporter.add_step(f"Navigated to {url}", "PASS", filename)
                 print(f"[DEBUG] Screenshot saved to {filename}")
@@ -251,8 +251,8 @@ class BrowserManager:
             if reporter:
                 status = "PASS" if "Successfully" in result else "FAIL"
                 step_uuid = str(uuid.uuid4())[:8]
-                filename = f"report_screenshots/step_{len(reporter.steps)}_{step_uuid}.jpg"
-                os.makedirs("report_screenshots", exist_ok=True)
+                filename = f"output/report_screenshots/step_{len(reporter.steps)}_{step_uuid}.jpg"
+                os.makedirs("output/report_screenshots", exist_ok=True)
                 await self.take_screenshot(filename)
                 reporter.add_step(f"Clicked {selector}. Result: {result}", status, filename)
             return result
@@ -272,8 +272,8 @@ class BrowserManager:
             if reporter:
                  status = "PASS" if "Successfully" in result else "FAIL"
                  step_uuid = str(uuid.uuid4())[:8]
-                 filename = f"report_screenshots/step_{len(reporter.steps)}_{step_uuid}.jpg"
-                 os.makedirs("report_screenshots", exist_ok=True)
+                 filename = f"output/report_screenshots/step_{len(reporter.steps)}_{step_uuid}.jpg"
+                 os.makedirs("output/report_screenshots", exist_ok=True)
                  await self.take_screenshot(filename)
                  reporter.add_step(f"Typed '{text}' into {selector}", status, filename)
             return result
