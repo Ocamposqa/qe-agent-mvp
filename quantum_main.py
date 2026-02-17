@@ -13,6 +13,22 @@ from quantum_qe_core.agents.auditor import AuditorAgent
 # Load environment variables
 load_dotenv()
 
+# SHARED: Fix for Windows Event Loop Runtime Error (Proactor)
+import sys
+if sys.platform.startswith("win"):
+    from asyncio.proactor_events import _ProactorBasePipeTransport
+    from functools import wraps
+    def silence_event_loop_closed(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            try:
+                return func(self, *args, **kwargs)
+            except RuntimeError as e:
+                if str(e) != 'Event loop is closed':
+                    raise
+        return wrapper
+    _ProactorBasePipeTransport.__del__ = silence_event_loop_closed(_ProactorBasePipeTransport.__del__)
+
 async def main():
     parser = argparse.ArgumentParser(description="Quantum QE Core (Enterprise Architecture)")
     parser.add_argument("--url", type=str, help="Target URL", default="http://localhost:8000/tests/test_suite_app.html")
@@ -26,7 +42,6 @@ async def main():
 
     print("Initializing Quantum QE Core (Multi-Agent System + RAG)...")
     
-    # Shared Resources (Skills)
     # Shared Resources (Skills)
     browser = BrowserManager(headless=args.headless)
     reporter = TestReporter("output/quantum_core_report.pdf")
