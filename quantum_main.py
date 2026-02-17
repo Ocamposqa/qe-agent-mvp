@@ -34,7 +34,13 @@ async def main():
     parser.add_argument("--url", type=str, help="Target URL", default="http://localhost:8000/tests/test_suite_app.html")
     parser.add_argument("--instructions", type=str, help="Functional Test Instructions", default="Login as admin/password and search for XSS payload.")
     parser.add_argument("--headless", action="store_true", help="Run headless")
+    parser.add_argument("--skip-security", action="store_true", help="Skip the security audit phase")
     args = parser.parse_args()
+
+    # Heuristic: Check if instructions imply skipping security
+    if "no security" in args.instructions.lower() or "no hagas un check de seguridad" in args.instructions.lower():
+        args.skip_security = True
+        print("[INFO] detected 'no security' instruction. Skipping Security Phase.")
 
     if not os.getenv("OPENAI_API_KEY"):
         print("Error: OPENAI_API_KEY is missing.")
@@ -64,12 +70,16 @@ async def main():
         reporter.add_step(f"Navigator Phase Complete: {nav_result}", "INFO")
 
         # Phase 2: Security Audit (Auditor)
-        print("\n--- Phase 2: Security Audit (Auditor) ---")
-        # Auditor inherits the current browser state from Navigator
-        audit_instruction = f"Perform a comprehensive security audit on the current page ({args.url}). Check for headers, cookies, and active vulnerabilities. If you find vulnerabilities, verify details with 'SearchSecurityStandards'."
-        audit_result = await auditor.run(audit_instruction)
-        print(f"Auditor Result: {audit_result}")
-        reporter.add_step(f"Auditor Phase Complete: {audit_result}", "INFO")
+        if not args.skip_security:
+            print("\n--- Phase 2: Security Audit (Auditor) ---")
+            # Auditor inherits the current browser state from Navigator
+            audit_instruction = f"Perform a comprehensive security audit on the current page ({args.url}). Check for headers, cookies, and active vulnerabilities. If you find vulnerabilities, verify details with 'SearchSecurityStandards'."
+            audit_result = await auditor.run(audit_instruction)
+            print(f"Auditor Result: {audit_result}")
+            reporter.add_step(f"Auditor Phase Complete: {audit_result}", "INFO")
+        else:
+            print("\n--- Phase 2: Security Audit (Skipped by user request) ---")
+            reporter.add_step("Security Audit Skipped by user request", "INFO")
 
     except Exception as e:
         print(f"Orchestration Error: {e}")
