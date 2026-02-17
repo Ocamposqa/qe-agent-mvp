@@ -1,0 +1,74 @@
+import os
+import asyncio
+import argparse
+from dotenv import load_dotenv
+
+# Enterprise Core Imports
+from quantum_qe_core.skills.browser import BrowserManager
+from quantum_qe_core.skills.reporter import TestReporter
+from quantum_qe_core.skills.knowledge import KnowledgeManager
+from quantum_qe_core.agents.navigator import NavigatorAgent
+from quantum_qe_core.agents.auditor import AuditorAgent
+
+# Load environment variables
+load_dotenv()
+
+async def main():
+    parser = argparse.ArgumentParser(description="Quantum QE Core (Enterprise Architecture)")
+    parser.add_argument("--url", type=str, help="Target URL", default="http://localhost:8000/test_suite_app.html")
+    parser.add_argument("--instructions", type=str, help="Functional Test Instructions", default="Login as admin/password and search for XSS payload.")
+    parser.add_argument("--headless", action="store_true", help="Run headless")
+    args = parser.parse_args()
+
+    if not os.getenv("OPENAI_API_KEY"):
+        print("Error: OPENAI_API_KEY is missing.")
+        return
+
+    print("Initializing Quantum QE Core (Multi-Agent System + RAG)...")
+    
+    # Shared Resources (Skills)
+    browser = BrowserManager(headless=args.headless)
+    reporter = TestReporter("quantum_core_report.pdf")
+    knowledge = KnowledgeManager("quantum_qe_core/knowledge")
+    
+    # Initialize Agents
+    navigator = NavigatorAgent(browser, reporter)
+    auditor = AuditorAgent(browser, reporter, knowledge)
+    
+    print("Agents Ready: Navigator (UI) & Auditor (AppSec + RAG).")
+    
+    try:
+        await browser.start()
+        
+        # Phase 1: functional Testing (Navigator)
+        print("\n--- Phase 1: Functional Testing (Navigator) ---")
+        nav_instruction = f"1. Navigate to {args.url}\n2. {args.instructions}"
+        nav_result = await navigator.run(nav_instruction)
+        print(f"Navigator Result: {nav_result}")
+        reporter.add_step(f"Navigator Phase Complete: {nav_result}", "INFO")
+
+        # Phase 2: Security Audit (Auditor)
+        print("\n--- Phase 2: Security Audit (Auditor) ---")
+        # Auditor inherits the current browser state from Navigator
+        audit_instruction = f"Perform a comprehensive security audit on the current page ({args.url}). Check for headers, cookies, and active vulnerabilities. If you find vulnerabilities, verify details with 'SearchSecurityStandards'."
+        audit_result = await auditor.run(audit_instruction)
+        print(f"Auditor Result: {audit_result}")
+        reporter.add_step(f"Auditor Phase Complete: {audit_result}", "INFO")
+
+    except Exception as e:
+        print(f"Orchestration Error: {e}")
+        reporter.add_step(f"Orchestration Error: {e}", "FAIL")
+    finally:
+        # Cleanup
+        try:
+             reporter.generate_report()
+             print(f"Report Generated: {reporter.filename}")
+        except Exception as e:
+             print(f"Report Generation Failed: {e}")
+             
+        await browser.close()
+        print("Quantum Core Shutdown.")
+
+if __name__ == "__main__":
+    os.environ["LANGCHAIN_TRACING_V2"] = "false"
+    asyncio.run(main())
