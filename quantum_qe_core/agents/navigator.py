@@ -9,10 +9,14 @@ from langchain_core.tools import tool
 @tool
 def ask_human(question: str) -> str:
     """Ask the human user for help or clarification when you are stuck or need input."""
-    # In a real CLI, this would be input(f"Agent asking: {question}\n> ")
-    # For now, we print it to make it visible in logs
     print(f"\n[AGENT ASKS HUMAN]: {question}")
-    return "User observed the question but manual input is mocked. Proceed with best guess or retry."
+    # Use real input() to block and wait for user response
+    try:
+        answer = input("> ")
+        return f"User Answer: {answer}"
+    except (EOFError, KeyboardInterrupt):
+        return "User refused to answer (EOF/Interrupt)."
+
 
 class NavigatorAgent:
     def __init__(self, browser_manager: BrowserManager, reporter: TestReporter = None):
