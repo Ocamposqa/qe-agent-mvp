@@ -24,6 +24,7 @@ class SecurityAuditor:
                 self.findings.append({
                     "severity": "Medium",
                     "type": "Missing Header",
+                    "cwe": "CWE-693",
                     "details": f"Missing {header} on {url}",
                     "remediation": f"Implement {header}. {description}"
                 })
@@ -37,6 +38,7 @@ class SecurityAuditor:
                 self.findings.append({
                     "severity": "Low",
                     "type": "Insecure Cookie",
+                    "cwe": "CWE-614",
                     "details": f"Cookie '{name}' is missing the 'Secure' flag.",
                     "remediation": "Set the 'Secure' flag to ensure the cookie is only sent over HTTPS."
                 })
@@ -45,6 +47,7 @@ class SecurityAuditor:
                 self.findings.append({
                     "severity": "Medium",
                     "type": "Insecure Cookie",
+                    "cwe": "CWE-1004",
                     "details": f"Cookie '{name}' is missing the 'HttpOnly' flag.",
                     "remediation": "Set the 'HttpOnly' flag to prevent access via JavaScript (XSS protection)."
                 })
@@ -88,6 +91,7 @@ class SecurityAuditor:
                  self.findings.append({
                     "severity": "High",
                     "type": "Reflected Input (Potential XSS)",
+                    "cwe": "CWE-79",
                     "details": f"Input at {selector} reflects injected values without escaping: {xss_payload}",
                     "remediation": "Ensure all user input is output encoded."
                 })
@@ -107,6 +111,7 @@ class SecurityAuditor:
                     self.findings.append({
                         "severity": "Critical",
                         "type": "SQL Injection Susceptibility",
+                        "cwe": "CWE-89",
                         "details": f"Input at {selector} caused a potential database error: '{err}'",
                         "remediation": "Use parameterized queries to prevent SQL injection."
                     })

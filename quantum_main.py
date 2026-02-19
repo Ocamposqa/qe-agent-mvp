@@ -82,8 +82,19 @@ async def main():
             
             audit_instruction = f"Perform a comprehensive security audit on the current page ({current_url}). Check for headers, cookies, and active vulnerabilities. If you find vulnerabilities, verify details with 'SearchSecurityStandards'."
             audit_result = await auditor.run(audit_instruction)
-            print(f"Auditor Result: {audit_result}")
-            reporter.add_step(f"Auditor Phase Complete (URL: {current_url}): {audit_result}", "INFO")
+            
+            # Parsing structured result
+            if isinstance(audit_result, dict):
+                summary = audit_result.get("summary", "No summary")
+                findings = audit_result.get("findings", [])
+                reporter.log_security_finding(findings)
+                print(f"Auditor Result: {summary}")
+                print(f"Findings Logged: {len(findings)}")
+                reporter.add_step(f"Auditor Phase Complete (URL: {current_url}): {summary}", "INFO")
+            else:
+                # Fallback for legacy string return
+                print(f"Auditor Result: {audit_result}")
+                reporter.add_step(f"Auditor Phase Complete (URL: {current_url}): {audit_result}", "INFO")
         else:
             print("\n--- Phase 2: Security Audit (Skipped by user request) ---")
             reporter.add_step("Security Audit Skipped by user request", "INFO")
@@ -96,6 +107,8 @@ async def main():
         try:
              reporter.generate_report()
              print(f"Report Generated: {reporter.filename}")
+             reporter.generate_html_report()
+             print(f"HTML Report Generated.")
         except Exception as e:
              print(f"Report Generation Failed: {e}")
              

@@ -10,6 +10,7 @@ env/
 
 # Reports and Screenshots
 *.pdf
+*.html
 report_screenshots/
 output.txt
 debug_output.txt

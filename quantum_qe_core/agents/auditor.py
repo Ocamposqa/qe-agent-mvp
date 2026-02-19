@@ -48,5 +48,11 @@ Your goal is to identify security vulnerabilities.
         
         messages = result.get("messages", [])
         if messages and hasattr(messages[-1], "content"):
-            return messages[-1].content
-        return "No response from Auditor."
+            summary = messages[-1].content
+        else:
+            summary = "No response from Auditor."
+            
+        return {
+            "summary": summary,
+            "findings": self.scanner.get_findings()
+        }
