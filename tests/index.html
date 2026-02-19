@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>TechHaven Mock</title>
+    <style>
+        .product {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px;
+        }
+
+        .favorites-badge {
+            background: gold;
+            padding: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>TechHaven</h1>
+    <div id="favorites-section">
+        Favorites: <span id="favorites-count" class="favorites-badge">0</span>
+    </div>
+
+    <div id="product-grid">
+        <div class="product">
+            <h2>ZenBook Pro Duo</h2>
+            <button class="add-btn" onclick="addToFavorites(this)">Add to Favorites</button>
+        </div>
+        <div class="product">
+            <h2>MacBook Air M3</h2>
+            <button class="add-btn" onclick="addToFavorites(this)">Add to Favorites</button>
+        </div>
+    </div>
+
+    <script>
+        function addToFavorites(btn) {
+            // Simulate network delay
+            btn.disabled = true;
+            btn.innerText = "Adding...";
+            setTimeout(() => {
+                let countSpan = document.getElementById('favorites-count');
+                let count = parseInt(countSpan.innerText);
+                countSpan.innerText = count + 1;
+                btn.innerText = "Added!";
+                btn.disabled = false; # Re - enable if multiple adds allowed, or keep disabled
+            }, 500);
+        }
+    </script>
+</body>
+
+</html>

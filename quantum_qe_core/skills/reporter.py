@@ -1,6 +1,7 @@
 from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as PlatypusImage
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
 import os
 from datetime import datetime
 
@@ -8,6 +9,7 @@ class TestReporter:
     def __init__(self, filename="test_report.pdf"):
         self.filename = filename
         self.steps = []
+        self.security_findings = []
         self.start_time = datetime.now()
 
     def add_step(self, description: str, status: str = "INFO", screenshot_path: str = None):
@@ -16,135 +18,101 @@ class TestReporter:
             "timestamp": datetime.now(),
             "description": description,
             "status": status,
-            "screenshot": screenshot_path
+            "screenshot": screenshot_path,
+            "security_findings": [] 
         })
 
-    def add_browser_logs(self, logs: list):
-        """Adds browser logs to the report."""
-        if logs:
-            self.steps.append({
-                "timestamp": datetime.now(),
-                "description": "Browser Logs Captured",
-                "status": "INFO",
-                "screenshot": None,
-                "logs": logs
-            })
-
-    def add_security_findings(self, findings: list):
-        """Adds security findings to the report."""
+    def log_security_finding(self, findings: list):
+        """Logs security findings (list of dicts)."""
         if findings:
-            self.steps.append({
-                "timestamp": datetime.now(),
-                "description": "Security Audit Completed",
-                "status": "INFO",
-                "screenshot": None,
-                "security_findings": findings
-            })
+            # Associate with the last step if possible, otherwise global list
+            if self.steps:
+                self.steps[-1]["security_findings"].extend(findings)
+            else:
+                self.security_findings.extend(findings)
 
     def generate_report(self, filename=None):
         target_file = filename or self.filename
         # Ensure directory exists
         os.makedirs(os.path.dirname(target_file) or ".", exist_ok=True)
-        c = canvas.Canvas(target_file, pagesize=letter)
-        width, height = letter
-        y = height - 50
         
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(50, y, "QE Agent Test Report")
-        y -= 30
+        doc = SimpleDocTemplate(target_file, pagesize=letter)
+        story = []
+        styles = getSampleStyleSheet()
         
-        c.setFont("Helvetica", 10)
+        # Styles
+        title_style = styles['Title']
+        heading_style = styles['Heading2']
+        normal_style = styles['Normal']
+        code_style = styles['Code']
+
+        # Title
+        story.append(Paragraph("Quantum QE Agent Report", title_style))
+        story.append(Spacer(1, 12))
         
-        for step in self.steps:
-            if y < 100:
-                c.showPage()
-                y = height - 50
-                
-            timestamp = step["timestamp"].strftime("%H:%M:%S")
-            # Truncate description if too long
-            desc = (step["description"][:75] + '..') if len(step["description"]) > 75 else step["description"]
+        # Timestamp
+        story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
+        story.append(Spacer(1, 12))
+
+        # --- Section 1: Functional Test Log ---
+        story.append(Paragraph("1. Functional Test Log", heading_style))
+        story.append(Spacer(1, 6))
+
+        for i, step in enumerate(self.steps):
+            # Step Description
+            status_color = "black"
+            if step['status'] == 'PASS': status_color = "green"
+            elif step['status'] == 'FAIL': status_color = "red"
             
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(50, y, f"[{timestamp}] [{step['status']}] {desc}")
-            y -= 15
-            
-            c.setFont("Helvetica", 9)
-            if step["screenshot"] and os.path.exists(step["screenshot"]):
+            step_text = f"<b>Step {i+1}:</b> {step['description']} (<font color='{status_color}'>{step['status']}</font>)"
+            story.append(Paragraph(step_text, normal_style))
+            story.append(Paragraph(f"<i>Timestamp: {step['timestamp'].strftime('%H:%M:%S')}</i>", normal_style))
+            story.append(Spacer(1, 6))
+
+            # Screenshot
+            if step['screenshot']:
                 try:
-                    # Draw screenshot (scaled down)
-                    img_width = 400
-                    img_height = 225
-                    
-                    # Check if we have space, else new page
-                    display_height = img_height
-                    display_width = img_width
-                    
-                    if y - display_height < 50:
-                        c.showPage()
-                        y = height - 50
-                    
-                    c.drawImage(step["screenshot"], 100, y - display_height, width=display_width, height=display_height)
-                    y -= (display_height + 20)
+                    # Resizing image to fit width (approx 6 inches)
+                    img = PlatypusImage(step['screenshot'], width=4*inch, height=3*inch, kind='proportional')
+                    story.append(img)
+                    story.append(Spacer(1, 6))
                 except Exception as e:
-                    c.drawString(100, y, f"[Error loading screenshot: {e}]")
-                    y -= 20
+                    story.append(Paragraph(f"<i>(Screenshot missing or invalid: {e})</i>", normal_style))
             
-            # Render Browser Logs
-            if "logs" in step:
-                c.setFont("Courier", 8)
-                c.drawString(70, y, "Captured Logs:")
-                y -= 10
-                for log in step["logs"][-10:]: # Show last 10 logs
-                    if y < 50:
-                        c.showPage()
-                        y = height - 50
-                    # Sanitize log line to avoid PDF errors
-                    safe_log = log.encode('latin-1', 'replace').decode('latin-1')
-                    c.drawString(80, y, safe_log[:100])
-                    y -= 10
-                y -= 10
-            
-            # Render Security Findings
-            if "security_findings" in step:
-                c.setFont("Helvetica-Bold", 11)
-                c.setFillColorRGB(0.8, 0, 0) # Red color
-                c.drawString(70, y, "Security Insights (Passive Scan):")
-                c.setFillColorRGB(0, 0, 0) # Reset color
-                y -= 15
-                # Calculate summary
-                counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0}
-                for f in step["security_findings"]:
-                    sev = f.get('severity', 'Info')
-                    counts[sev] = counts.get(sev, 0) + 1
-                
-                summary_text = f"Summary: Critical: {counts['Critical']}, High: {counts['High']}, Medium: {counts['Medium']}, Low: {counts['Low']}"
-                c.setFont("Helvetica-Oblique", 10)
-                c.drawString(70, y, summary_text)
-                y -= 20
-                
-                c.setFont("Helvetica", 9)
+            # Security Findings for this step
+            if step.get("security_findings"):
+                story.append(Paragraph("<b>Security Insights (Passive Scan):</b>", normal_style))
                 
                 for finding in step["security_findings"]:
-                    if y < 60:
-                        c.showPage()
-                        y = height - 50
-                    
                     severity = finding.get('severity', 'Info')
+                    sev_color = "black"
+                    if severity == 'Critical': sev_color = "red"
+                    elif severity == 'High': sev_color = "orange"
+                    
                     title = finding.get('type', 'Finding')
                     details = finding.get('details', '')
                     remediation = finding.get('remediation', '')
                     
-                    c.setFont("Helvetica-Bold", 9)
-                    c.drawString(80, y, f"[{severity}] {title}")
-                    y -= 12
-                    c.setFont("Helvetica", 9)
-                    c.drawString(90, y, f"Details: {details}")
-                    y -= 12
-                    c.setFont("Helvetica-Oblique", 8)
-                    c.drawString(90, y, f"Remediation: {remediation}")
-                    y -= 20
+                    finding_text = f"[{severity}] {title}: {details}"
+                    story.append(Paragraph(f"<font color='{sev_color}'>{finding_text}</font>", normal_style))
+                    if remediation:
+                         story.append(Paragraph(f"<i>Remediation: {remediation}</i>", normal_style))
+                    story.append(Spacer(1, 4))
 
-            y -= 10
+            story.append(Spacer(1, 12))
             
-        c.save()
-        print(f"Report generated: {filename}")
+        # --- Section 2: Global Security Findings (if any unattached) ---
+        if self.security_findings:
+            story.append(Paragraph("2. General Security Findings", heading_style))
+            for finding in self.security_findings:
+                 severity = finding.get('severity', 'Info')
+                 title = finding.get('type', 'Finding')
+                 details = finding.get('details', '')
+                 story.append(Paragraph(f"[{severity}] {title}: {details}", normal_style))
+                 story.append(Spacer(1, 4))
+
+        try:
+            doc.build(story)
+            print(f"Report generated: {target_file}")
+        except Exception as e:
+            print(f"Failed to generate report: {e}")

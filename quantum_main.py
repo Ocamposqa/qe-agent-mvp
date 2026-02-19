@@ -31,7 +31,7 @@ if sys.platform.startswith("win"):
 
 async def main():
     parser = argparse.ArgumentParser(description="Quantum QE Core (Enterprise Architecture)")
-    parser.add_argument("--url", type=str, help="Target URL", default="http://localhost:8000/tests/test_suite_app.html")
+    parser.add_argument("--url", type=str, help="Target URL", default=None)
     parser.add_argument("--instructions", type=str, help="Functional Test Instructions", default="Login as admin/password and search for XSS payload.")
     parser.add_argument("--headless", action="store_true", help="Run headless")
     parser.add_argument("--skip-security", action="store_true", help="Skip the security audit phase")
@@ -64,7 +64,11 @@ async def main():
         
         # Phase 1: functional Testing (Navigator)
         print("\n--- Phase 1: Functional Testing (Navigator) ---")
-        nav_instruction = f"1. Navigate to {args.url}\n2. {args.instructions}"
+        if args.url:
+            nav_instruction = f"1. Navigate to {args.url}\n2. {args.instructions}"
+        else:
+            nav_instruction = args.instructions
+            
         nav_result = await navigator.run(nav_instruction)
         print(f"Navigator Result: {nav_result}")
         reporter.add_step(f"Navigator Phase Complete: {nav_result}", "INFO")
@@ -73,10 +77,13 @@ async def main():
         if not args.skip_security:
             print("\n--- Phase 2: Security Audit (Auditor) ---")
             # Auditor inherits the current browser state from Navigator
-            audit_instruction = f"Perform a comprehensive security audit on the current page ({args.url}). Check for headers, cookies, and active vulnerabilities. If you find vulnerabilities, verify details with 'SearchSecurityStandards'."
+            current_url = await browser.get_url()
+            print(f"[INFO] Auditing Current URL: {current_url}")
+            
+            audit_instruction = f"Perform a comprehensive security audit on the current page ({current_url}). Check for headers, cookies, and active vulnerabilities. If you find vulnerabilities, verify details with 'SearchSecurityStandards'."
             audit_result = await auditor.run(audit_instruction)
             print(f"Auditor Result: {audit_result}")
-            reporter.add_step(f"Auditor Phase Complete: {audit_result}", "INFO")
+            reporter.add_step(f"Auditor Phase Complete (URL: {current_url}): {audit_result}", "INFO")
         else:
             print("\n--- Phase 2: Security Audit (Skipped by user request) ---")
             reporter.add_step("Security Audit Skipped by user request", "INFO")

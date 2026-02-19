@@ -56,6 +56,12 @@ class BrowserManager:
             
         return await self.get_simplified_dom()
 
+    async def get_url(self) -> str:
+        """Returns the current URL."""
+        if self.page:
+             return self.page.url
+        return "No Page Open"
+
     async def click_element(self, selector: str) -> str:
         """Clicks an element based on a CSS selector."""
         if not self.page:

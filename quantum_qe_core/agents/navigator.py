@@ -4,12 +4,22 @@ from langchain_core.messages import SystemMessage
 from quantum_qe_core.skills.browser import BrowserManager
 from quantum_qe_core.skills.reporter import TestReporter
 
+from langchain_core.tools import tool
+
+@tool
+def ask_human(question: str) -> str:
+    """Ask the human user for help or clarification when you are stuck or need input."""
+    # In a real CLI, this would be input(f"Agent asking: {question}\n> ")
+    # For now, we print it to make it visible in logs
+    print(f"\n[AGENT ASKS HUMAN]: {question}")
+    return "User observed the question but manual input is mocked. Proceed with best guess or retry."
+
 class NavigatorAgent:
     def __init__(self, browser_manager: BrowserManager, reporter: TestReporter = None):
         self.browser = browser_manager
         self.reporter = reporter
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
-        self.tools = self.browser.get_tools(self.reporter)
+        self.tools = self.browser.get_tools(self.reporter) + [ask_human]
         self.agent_graph = self._setup_agent()
 
     def _setup_agent(self):
@@ -26,6 +36,7 @@ Your goal is to perform functional testing on web applications.
 - Do NOT perform security scanning or active fuzzing. That is the job of the Auditor Agent.
 - Analyze the DOM to understand the page structure.
 - Execute tools sequentially.
+- If you are stuck or encounter a timeout/error, use the 'ask_human' tool to request assistance.
 """
         model_with_tools = self.llm.bind_tools(self.tools, parallel_tool_calls=False)
         return create_react_agent(model_with_tools, self.tools, prompt=system_message)
