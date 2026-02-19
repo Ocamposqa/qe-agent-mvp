@@ -67,10 +67,21 @@ class BrowserManager:
         if not self.page:
             return "Error: Browser not started."
         try:
-            await self.page.click(selector, timeout=5000) # 5s timeout for interactions
+            # Try standard Playwright click
+            await self.page.click(selector, timeout=5000) 
             return f"Successfully clicked element with selector: {selector}"
-        except Exception as e:
-            return f"Failed to click element: {str(e)}"
+        except Exception as e_click:
+            # Fallback to JavaScript click
+            try:
+                # Check if element exists first
+                handle = await self.page.query_selector(selector)
+                if handle:
+                    await self.page.evaluate("(element) => element.click()", handle)
+                    return f"Successfully clicked element (via JS fallback) with selector: {selector}"
+                else:
+                     return f"Failed to click: Element {selector} not found."
+            except Exception as e_js:
+                return f"Failed to click element: {str(e_click)}. JS Fallback also failed: {str(e_js)}"
 
     async def type_text(self, selector: str, text: str) -> str:
         """Types text into an element based on a CSS selector."""
@@ -112,7 +123,8 @@ class BrowserManager:
 
             # Simplify structure - focusing on interactive elements
             interactive_elements = []
-            for tag in soup.find_all(['a', 'button', 'input', 'select', 'textarea', 'form', 'div', 'span']):
+            # Improved selector list to include more semantic elements
+            for tag in soup.find_all(['a', 'button', 'input', 'select', 'textarea', 'form', 'div', 'span', 'li', 'ul', 'h1', 'h2', 'h3']):
                  # Basic attributes
                  attrs = []
                  if tag.get('id'): attrs.append(f"id='{tag['id']}'")
@@ -121,15 +133,16 @@ class BrowserManager:
                  if tag.get('placeholder'): attrs.append(f"placeholder='{tag['placeholder']}'")
                  if tag.get('href'): attrs.append(f"href='{tag['href']}'")
                  if tag.get('type'): attrs.append(f"type='{tag['type']}'")
+                 if tag.get('onclick'): attrs.append(f"onclick='{tag['onclick']}'") # Crucial for some frameworks
                  
                  # Robust attributes (Testing & Accessibility)
                  for attr in ['data-testid', 'data-test-id', 'data-cy', 'aria-label', 'role', 'title']:
                      if tag.get(attr):
                          attrs.append(f"{attr}='{tag[attr]}'")
 
-                 # Only include divs/spans if they have relevant attributes or are interactive
-                 if tag.name in ['div', 'span']:
-                     if not any(k in tag.attrs for k in ['id', 'data-testid', 'data-test-id', 'data-cy', 'role', 'onclick']):
+                 # Only include generic containers if they have relevant attributes
+                 if tag.name in ['div', 'span', 'li', 'ul', 'h1', 'h2', 'h3']:
+                     if not any(k in tag.attrs for k in ['id', 'data-testid', 'data-test-id', 'data-cy', 'role', 'onclick', 'class']):
                          continue
 
                  text = tag.get_text(strip=True)
@@ -219,7 +232,7 @@ class BrowserManager:
                     # Fallback to a less robust selector or skip
                     # leveraging playwright's locator logic would be better but simple CSS for now
                     continue 
-
+                
                 inputs.append({
                     "selector": selector,
                     "type": type_attr or "text",
@@ -234,22 +247,20 @@ class BrowserManager:
     def get_tools(self, reporter=None):
         """Returns a list of LangChain Tools exposed by this skill."""
         
+        # Redefine navigate wrapper to match original structure but cleaner
         async def navigate_wrapper(url: str):
-            print(f"[DEBUG] navigate_wrapper called with {url}")
-            result = await self.navigate(url)
-            
-            # Log step
-            if reporter:
+             print(f"[DEBUG] navigate_wrapper called with {url}")
+             result = await self.navigate(url)
+             if reporter:
                 step_uuid = str(uuid.uuid4())[:8]
                 filename = f"output/report_screenshots/step_{len(reporter.steps)}_{step_uuid}.jpg"
                 os.makedirs("output/report_screenshots", exist_ok=True)
                 await self.take_screenshot(filename)
                 reporter.add_step(f"Navigated to {url}", "PASS", filename)
-                print(f"[DEBUG] Screenshot saved to {filename}")
-
-            if isinstance(result, dict):
-                return result.get("text", "No content") 
-            return result
+             
+             if isinstance(result, dict):
+                return result.get("text", "No content")
+             return result
 
         async def click_wrapper(selector: str):
             print(f"[DEBUG] click_wrapper received: {selector}")
