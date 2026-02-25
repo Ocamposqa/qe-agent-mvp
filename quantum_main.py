@@ -62,7 +62,7 @@ async def main():
     try:
         await browser.start()
         
-        # Phase 1: functional Testing (Navigator)
+        # Phase 1: Functional Testing (Navigator)
         print("\n--- Phase 1: Functional Testing (Navigator) ---")
         if args.url:
             nav_instruction = f"1. Navigate to {args.url}\n2. {args.instructions}"

@@ -17,11 +17,9 @@ This is an **Autonomous Quality Engineering (QE) Agent** designed to autonomousl
 - **Human-in-the-Loop**: Can ask the user for help when stuck.
 
 ## Components
-- **`main.py`**: Entry point for running test scenarios.
-- **`agent_logic.py`**: Core agent logic using ReAct pattern.
-- **`browser_tools.py`**: Playwright integration for browser interactions.
-- **`reporting.py`**: PDF reporting and screenshot management.
-- **`security_auditor.py`**: Security scanning logic (Passive & Active).
+- **`quantum_main.py`**: Entry point for running test scenarios.
+- **`quantum_qe_core`**: Enterprise-grade core modules.
+- **`legacy_mvp`**: Old version of the agent (for reference).
 
 ## Capabilities
 
@@ -61,21 +59,21 @@ You can run the agent with various options:
 
 **1. Default Login Test:**
    ```bash
-   python main.py
+   python quantum_main.py
    ```
 
 **2. Test a Custom URL:**
    ```bash
    # Generates generic testing instructions for the page
-   python main.py --url https://example.com
+   python quantum_main.py --url https://example.com
    ```
 
 **3. Run Headless (No UI):**
    ```bash
-   python main.py --headless
+   python quantum_main.py --headless
    ```
 
 **4. Custom Instructions:**
    ```bash
-   python main.py --instructions "1. Go to google.com 2. Search for 'Playwright'"
+   python quantum_main.py --instructions "1. Go to google.com 2. Search for 'Playwright'"
    ```

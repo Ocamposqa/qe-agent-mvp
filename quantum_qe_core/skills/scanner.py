@@ -52,8 +52,8 @@ class SecurityAuditor:
                     "remediation": "Set the 'HttpOnly' flag to prevent access via JavaScript (XSS protection)."
                 })
             
-            same_site = cookie.get('sameSite', 'None')
-            if same_site == 'None' or not same_site:
+            same_site = str(cookie.get('sameSite', 'None')).lower()
+            if same_site == 'none' or not same_site:
                 self.findings.append({
                     "severity": "Low",
                     "type": "Insecure Cookie",
