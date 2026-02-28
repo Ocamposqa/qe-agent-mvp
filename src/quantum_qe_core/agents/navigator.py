@@ -1,8 +1,9 @@
+from typing import Optional, Any
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage
-from quantum_qe_core.skills.browser import BrowserManager
-from quantum_qe_core.skills.reporter import TestReporter
+from src.quantum_qe_core.skills.browser import BrowserManager
+from src.quantum_qe_core.skills.reporter import TestReporter
 
 from langchain_core.tools import tool
 
@@ -19,14 +20,22 @@ def ask_human(question: str) -> str:
 
 
 class NavigatorAgent:
-    def __init__(self, browser_manager: BrowserManager, reporter: TestReporter = None):
+    """
+    NavigatorAgent is responsible for standard Functional QA Testing. It navigates 
+    target URLs, interacts with the DOM (clicking, typing), and validates UI state 
+    changes without performing hostile active scanning.
+    """
+    def __init__(self, browser_manager: BrowserManager, reporter: Optional[TestReporter] = None) -> None:
         self.browser = browser_manager
         self.reporter = reporter
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
         self.tools = self.browser.get_tools(self.reporter) + [ask_human]
         self.agent_graph = self._setup_agent()
 
-    def _setup_agent(self):
+    def _setup_agent(self) -> Any:
+        """
+        Configures the LangGraph ReAct agent with specific navigation constraints and tools.
+        """
         system_message = """You are the 'Navigator Agent' (UI Specialist).
 Your goal is to perform functional testing on web applications.
 
@@ -45,12 +54,21 @@ Your goal is to perform functional testing on web applications.
         model_with_tools = self.llm.bind_tools(self.tools, parallel_tool_calls=False)
         return create_react_agent(model_with_tools, self.tools, prompt=system_message)
     
-    async def run(self, instruction: str):
+    async def run(self, instruction: str) -> str:
+        """
+        Executes the Navigator Agent's intelligence loop.
+        
+        Args:
+            instruction (str): The specific functional testing directive provided by the Orchestrator.
+            
+        Returns:
+            str: A textual summary of the agent's actions and whether the test passed or failed.
+        """
         print(f"[NAVIGATOR] Running with instruction: {instruction}")
         inputs = {"messages": [{"role": "user", "content": instruction}]}
         result = await self.agent_graph.ainvoke(inputs)
         
         messages = result.get("messages", [])
         if messages and hasattr(messages[-1], "content"):
-            return messages[-1].content
+            return str(messages[-1].content)
         return "No response from Navigator."
