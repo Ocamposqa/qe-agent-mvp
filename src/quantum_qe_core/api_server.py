@@ -38,8 +38,13 @@ from src.quantum_qe_core.skills.knowledge import KnowledgeManager
 from src.quantum_qe_core.agents.navigator import NavigatorAgent
 from src.quantum_qe_core.agents.auditor import AuditorAgent
 from src.quantum_qe_core.telemetry import log_telemetry  # NEW
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Quantum QE Enterprise API", version="1.0.0")
+
+# Mount output directory for HTML reports
+os.makedirs("output", exist_ok=True)
+app.mount("/reports", StaticFiles(directory="output"), name="reports")
 
 # Allow Frontend to connect
 app.add_middleware(
@@ -290,12 +295,16 @@ async def run_quantum_orchestrator(job_id: str, request: ScanRequest):
         
         # Generation of Final HTML Report
         await broadcast_telemetry(job_id, {"type": "status", "phase": "Generating Final Report"})
-        await broadcast_telemetry(job_id, {"type": "log", "message": "Reporter Agent is consolidating all findings into an Enterprise HTML Report."})
-        await asyncio.sleep(1) # Mock time
-        # Currently the PDF reporter exists, we will transition it to HTML in the specific agent module.
+        
+        from src.quantum_qe_core.agents.reporter import ReporterAgent
+        reporter_agent = ReporterAgent(reporter)
+        
+        await broadcast_telemetry(job_id, {"type": "log", "message": "Reporter Agent is consolidating findings and writing the Spanish Executive Summary via LLM."})
+        html_report_path = await reporter_agent.run(job_id)
+        
+        await broadcast_telemetry(job_id, {"type": "log", "message": f"Enterprise HTML Report generated locally at: {html_report_path}"})
 
         # Cleanup
-        reporter.generate_html_report()
         await browser.close()
         
         # Log final telemetry for billing
@@ -304,6 +313,7 @@ async def run_quantum_orchestrator(job_id: str, request: ScanRequest):
         await broadcast_telemetry(job_id, {
             "type": "status", 
             "phase": "Complete", 
+            "html_report_url": f"http://localhost:8000/reports/report_{job_id}.html",
             "message": f"Scan Finished Successfully. Estimated Cost: ${est_cost:.4f}"
         })
         

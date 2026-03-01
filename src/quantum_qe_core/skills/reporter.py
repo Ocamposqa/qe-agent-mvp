@@ -117,10 +117,9 @@ class TestReporter:
         except Exception as e:
             print(f"Failed to generate report: {e}")
 
-    def generate_html_report(self):
+    def generate_html_report(self, job_id: str, spanish_summary: str = ""):
         """Generates a professional HTML report with Tailwind CSS and Chart.js."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        html_filename = f"output/report_{timestamp}.html"
+        html_filename = f"output/report_{job_id}.html"
         os.makedirs("output", exist_ok=True)
 
         # Calculate Metrics
@@ -160,63 +159,63 @@ class TestReporter:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantum QE Agent Report</title>
+    <title>SQASA Enterprise QA Report</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <style>
         body {{ font-family: 'Inter', sans-serif; }}
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-[#f3f4f6] text-[#060b29]">
 
     <!-- Navbar -->
-    <nav class="bg-indigo-900 text-white p-4 shadow-lg">
+    <nav class="bg-[#03287d] text-white p-4 shadow-lg border-b-4 border-[#ffc440]">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-2">
-                <span class="text-2xl font-bold tracking-tight">Quantum Core</span>
-                <span class="px-2 py-0.5 rounded bg-indigo-800 text-xs font-mono">v1.2</span>
+                <span class="text-2xl font-black tracking-tight">SQASA | Enterprise QA</span>
+                <span class="px-2 py-0.5 rounded bg-[#0032a7] text-xs font-mono font-bold">Report v1.0</span>
             </div>
-            <div class="text-sm opacity-80 font-mono">Execution ID: {timestamp}</div>
+            <div class="text-sm font-mono text-gray-300">Execution ID: {job_id}</div>
         </div>
     </nav>
 
     <div class="container mx-auto p-6 max-w-7xl">
         
         <!-- Executive Summary -->
-        <h2 class="text-xl font-bold text-gray-700 mb-4 border-l-4 border-indigo-600 pl-3">Executive Summary</h2>
+        <h2 class="text-xl font-black text-[#03287d] mb-4 border-l-4 border-[#fca311] pl-3 uppercase tracking-wider">Executive Summary</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div class="text-gray-500 text-xs font-bold uppercase tracking-wide">Total Steps</div>
-                <div class="text-4xl font-extrabold text-indigo-700 mt-2">{total_steps}</div>
+                <div class="text-4xl font-black text-[#03287d] mt-2">{total_steps}</div>
             </div>
-             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div class="text-gray-500 text-xs font-bold uppercase tracking-wide">Functional Pass Rate</div>
                 <div class="flex items-baseline gap-2 mt-2">
-                     <div class="text-4xl font-extrabold text-green-600">{passed_steps}</div>
-                     <span class="text-sm text-gray-400">/ {total_steps}</span>
+                     <div class="text-4xl font-black text-[#0032a7]">{passed_steps}</div>
+                     <span class="text-sm text-gray-400 font-bold">/ {total_steps}</span>
                 </div>
             </div>
-             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div class="text-gray-500 text-xs font-bold uppercase tracking-wide">Security Vulnerabilities</div>
-                <div class="text-4xl font-extrabold text-orange-600 mt-2">{total_vulns}</div>
+                <div class="text-4xl font-black text-[#fca311] mt-2">{total_vulns}</div>
             </div>
-             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div class="text-gray-500 text-xs font-bold uppercase tracking-wide">Critical Issues</div>
-                <div class="text-4xl font-extrabold text-red-600 mt-2">{severity_counts['Critical']}</div>
+                <div class="text-4xl font-black text-red-600 mt-2">{severity_counts['Critical']}</div>
             </div>
         </div>
 
         <!-- Charts Section -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <div class="bg-white p-6 rounded-lg shadow-md border border-gray-100">
-                <h3 class="text-sm font-bold text-gray-500 uppercase mb-4">Functional Execution Status</h3>
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <h3 class="text-sm font-bold text-[#03287d] uppercase mb-4 tracking-wider">Functional Execution Status</h3>
                 <div class="h-64 flex justify-center">
                     <canvas id="functionalChart"></canvas>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-md border border-gray-100">
-                <h3 class="text-sm font-bold text-gray-500 uppercase mb-4">Vulnerability Severity Distribution</h3>
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <h3 class="text-sm font-bold text-[#03287d] uppercase mb-4 tracking-wider">Vulnerability Severity Distribution</h3>
                 <div class="h-64 flex justify-center">
                     <canvas id="securityChart"></canvas>
                 </div>
@@ -224,14 +223,14 @@ class TestReporter:
         </div>
 
         <!-- Section 2: Security Audit Report -->
-        <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-purple-600 pl-3">Security Audit Report</h2>
+        <h2 class="text-xl font-black text-[#03287d] mb-6 border-l-4 border-[#ffc440] pl-3 uppercase tracking-wider">Security Audit Report</h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             <!-- Passive Scan Column -->
             <div>
                 <div class="flex items-center gap-2 mb-4">
-                     <span class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">P</span>
-                     <h3 class="text-lg font-bold text-gray-800">Passive Analysis</h3>
+                     <span class="w-8 h-8 rounded-full bg-[#03287d]/10 flex items-center justify-center text-[#03287d] font-bold text-sm">P</span>
+                     <h3 class="text-lg font-bold text-[#060b29]">Passive Analysis</h3>
                 </div>
                 <div class="space-y-4">
 """
@@ -271,8 +270,8 @@ class TestReporter:
             <!-- Active Scan Column -->
              <div>
                 <div class="flex items-center gap-2 mb-4">
-                     <span class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-sm">A</span>
-                     <h3 class="text-lg font-bold text-gray-800">Active Scanning</h3>
+                     <span class="w-8 h-8 rounded-full bg-[#fca311]/10 flex items-center justify-center text-[#fca311] font-bold text-sm">A</span>
+                     <h3 class="text-lg font-bold text-[#060b29]">Active Scanning</h3>
                 </div>
                 <div class="space-y-4">
         """
@@ -311,8 +310,8 @@ class TestReporter:
         </div>
 
         <!-- Section 3: Functional Execution Log -->
-        <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-indigo-600 pl-3">Functional Execution Log</h2>
-        <div class="space-y-4 mb-20">
+        <h2 class="text-xl font-black text-[#03287d] mb-6 border-l-4 border-[#0032a7] pl-3 uppercase tracking-wider">Functional Execution Log</h2>
+        <div class="space-y-4 mb-12">
 """
         
         # Render Steps
@@ -353,6 +352,12 @@ class TestReporter:
 
         html_content += """
         </div>
+
+        <!-- Section 4: AI Agent Step-by-Step Summary & Conclusion (Spanish) -->
+        <h2 class="text-xl font-black text-[#03287d] mb-6 border-l-4 border-green-500 pl-3 uppercase tracking-wider">Resumen y Conclusiones del Agente</h2>
+        <div class="bg-white p-8 rounded-xl shadow-md border border-gray-200 mb-20">
+            %s
+        </div>
         
         <script>
             // Charts Configuration
@@ -363,7 +368,7 @@ class TestReporter:
                     labels: ['Passed', 'Failed'],
                     datasets: [{
                         data: [%d, %d],
-                        backgroundColor: ['#10B981', '#EF4444'],
+                        backgroundColor: ['#0032a7', '#EF4444'], // Royal Blue & Red
                         borderWidth: 0
                     }]
                 },
@@ -378,7 +383,7 @@ class TestReporter:
                     datasets: [{
                         label: 'Findings',
                         data: [%d, %d, %d, %d, %d],
-                        backgroundColor: ['#DC2626', '#F97316', '#FBBF24', '#3B82F6', '#9CA3AF'],
+                        backgroundColor: ['#DC2626', '#fca311', '#ffc440', '#3B82F6', '#9CA3AF'], // Red, Orange, Gold, Blue, Gray
                         borderRadius: 4,
                         maxBarThickness: 30
                     }]
@@ -395,15 +400,15 @@ class TestReporter:
             });
         </script>
     </div>
-    <div class="bg-gray-900 text-white py-12 mt-12">
+    <div class="bg-[#03287d] text-white py-12 mt-12 border-t-4 border-[#ffc440]">
         <div class="container mx-auto text-center">
-            <h3 class="font-bold text-lg mb-2">Quantum QE Agent</h3>
-            <p class="text-gray-400 text-sm">Automated Functional & Security Assurance</p>
+            <h3 class="font-black text-xl mb-2 tracking-wider">SQASA ENTERPRISE</h3>
+            <p class="text-blue-200 text-sm font-bold uppercase tracking-widest">Automated Functional & Security Assurance</p>
         </div>
     </div>
 </body>
 </html>
-        """ % (passed_steps, failed_steps, 
+        """ % (spanish_summary or "<p class='text-gray-500 italic'>Sin resumen generado.</p>", passed_steps, failed_steps, 
                severity_counts['Critical'], severity_counts['High'], 
                severity_counts['Medium'], severity_counts['Low'], severity_counts['Info'])
 

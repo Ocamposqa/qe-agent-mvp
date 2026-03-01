@@ -18,6 +18,7 @@ export default function CorporateQEDashboard() {
   const [logs, setLogs] = useState<string[]>([]);
   const [domImage, setDomImage] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [reportUrl, setReportUrl] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [telemetry, setTelemetry] = useState({ tokens: 0, ms: 0 });
   const [selectedAgents, setSelectedAgents] = useState<string[]>(["functional"]);
@@ -43,6 +44,7 @@ export default function CorporateQEDashboard() {
     }
     setStatus("Running");
     setHitlPrompt(null);
+    setReportUrl(null);
     setLogs((prev) => [...prev, "[SYSTEM] Iniciando Orquestación Multi-Agente...", `[SYSTEM] Agentes activados: ${selectedAgents.join(", ")}`]);
 
     try {
@@ -97,7 +99,10 @@ export default function CorporateQEDashboard() {
             setTelemetry(prev => ({ ...prev, tokens: prev.tokens + 1500, ms: prev.ms + 1200 }));
           } else if (data.type === "status") {
             setLogs((prev) => [...prev, `[SYSTEM] Status: ${data.phase || data.message}`]);
-            if (data.phase === "Complete") setStatus("Complete");
+            if (data.phase === "Complete") {
+              setStatus("Complete");
+              if (data.html_report_url) setReportUrl(data.html_report_url);
+            }
           } else if (data.type === "hitl_request") {
             // New HITL Event
             setStatus("Paused_HITL");
@@ -154,9 +159,12 @@ export default function CorporateQEDashboard() {
 
         <div className="flex gap-4">
           {status === "Complete" && (
-            <button className="bg-[#ffc440] hover:bg-[#fca311] text-[#060b29] font-bold px-4 py-2 rounded-lg flex items-center gap-2 shadow transition transform hover:scale-105">
+            <button
+              onClick={() => reportUrl && window.open(reportUrl, "_blank")}
+              className="bg-[#ffc440] hover:bg-[#fca311] text-[#060b29] font-bold px-4 py-2 rounded-lg flex items-center gap-2 shadow transition transform hover:scale-105"
+            >
               <CheckCircle2 className="w-4 h-4" />
-              Open HTML HTML Report
+              Open HTML Report
             </button>
           )}
           <div className="bg-gray-50 border border-gray-100 rounded px-4 py-2 flex flex-col items-end">
