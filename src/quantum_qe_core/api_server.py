@@ -32,12 +32,12 @@ if sys.platform.startswith("win"):
     _ProactorBasePipeTransport.__del__ = silence_event_loop_closed(_ProactorBasePipeTransport.__del__)
 
 # Quantum Core Imports (to be used later for orchestration)
-from quantum_qe_core.skills.browser import BrowserManager
-from quantum_qe_core.skills.reporter import TestReporter
-from quantum_qe_core.skills.knowledge import KnowledgeManager
-from quantum_qe_core.agents.navigator import NavigatorAgent
-from quantum_qe_core.agents.auditor import AuditorAgent
-from quantum_qe_core.telemetry import log_telemetry  # NEW
+from src.quantum_qe_core.skills.browser import BrowserManager
+from src.quantum_qe_core.skills.reporter import TestReporter
+from src.quantum_qe_core.skills.knowledge import KnowledgeManager
+from src.quantum_qe_core.agents.navigator import NavigatorAgent
+from src.quantum_qe_core.agents.auditor import AuditorAgent
+from src.quantum_qe_core.telemetry import log_telemetry  # NEW
 
 app = FastAPI(title="Quantum QE Enterprise API", version="1.0.0")
 

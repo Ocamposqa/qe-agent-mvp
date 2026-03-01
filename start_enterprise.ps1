@@ -6,7 +6,7 @@ Write-Host "==========================================" -ForegroundColor Cyan
 
 # 1. Start FastAPI Backend Telemetry/Agents (Port 8000)
 Write-Host "[1/2] Initializing Backend Orchestrator (Port 8000)..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", ".\venv\Scripts\Activate.ps1; uvicorn quantum_qe_core.api_server:app --reload --port 8000" -WindowStyle Normal
+Start-Process powershell -ArgumentList "-NoExit", "-Command", ".\venv\Scripts\Activate.ps1; uvicorn src.quantum_qe_core.api_server:app --reload --port 8000" -WindowStyle Normal
 
 # 2. Wait a moment
 Start-Sleep -Seconds 3
