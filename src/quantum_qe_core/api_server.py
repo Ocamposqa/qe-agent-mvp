@@ -261,6 +261,10 @@ async def run_quantum_orchestrator(job_id: str, request: ScanRequest):
             "message": f"Scan Finished Successfully. Estimated Cost: ${est_cost:.4f}"
         })
         
+    except asyncio.TimeoutError:
+        error_msg = "Mission Timeout: Agent execution exceeded the 5-minute limit (Possible Infinite Loop or Rate Limit)."
+        logger.error(f"Job {job_id} failed: {error_msg}")
+        await broadcast_telemetry(job_id, {"type": "error", "message": error_msg})
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Job {job_id} failed: {error_msg}")

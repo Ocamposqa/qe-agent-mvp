@@ -1,4 +1,5 @@
 from typing import Optional, Dict, Any, List
+import asyncio
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage
@@ -23,7 +24,7 @@ class AuditorAgent:
         self.browser = browser_manager
         self.reporter = reporter
         self.knowledge = knowledge_manager
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        self.llm = ChatOpenAI(model="gpt-4o", temperature=0, max_retries=1)
         
         # Tools depend on browser manager instance
         self.tools: List[Any] = self.scanner.get_tools(self.browser)
@@ -67,7 +68,11 @@ Your goal is to identify security vulnerabilities.
         """
         print(f"[AUDITOR] Running with instruction: {instruction}")
         inputs = {"messages": [{"role": "user", "content": instruction}]}
-        result = await self.agent_graph.ainvoke(inputs)
+        # Enforce Recursion Limit and Hardware Timeout
+        result = await asyncio.wait_for(
+            self.agent_graph.ainvoke(inputs, config={"recursion_limit": 10}),
+            timeout=300
+        )
         
         messages = result.get("messages", [])
         if messages and hasattr(messages[-1], "content"):

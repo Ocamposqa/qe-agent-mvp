@@ -1,4 +1,5 @@
 from typing import Optional, Any
+import asyncio
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage
@@ -28,7 +29,7 @@ class NavigatorAgent:
     def __init__(self, browser_manager: BrowserManager, reporter: Optional[TestReporter] = None) -> None:
         self.browser = browser_manager
         self.reporter = reporter
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        self.llm = ChatOpenAI(model="gpt-4o", temperature=0, max_retries=1)
         self.tools = self.browser.get_tools(self.reporter) + [ask_human]
         self.agent_graph = self._setup_agent()
 
@@ -66,7 +67,11 @@ Your goal is to perform functional testing on web applications.
         """
         print(f"[NAVIGATOR] Running with instruction: {instruction}")
         inputs = {"messages": [{"role": "user", "content": instruction}]}
-        result = await self.agent_graph.ainvoke(inputs)
+        # Apply Recursion Limit (max 10 steps) and a Hardware Timeout (300 seconds)
+        result = await asyncio.wait_for(
+            self.agent_graph.ainvoke(inputs, config={"recursion_limit": 10}),
+            timeout=300
+        )
         
         messages = result.get("messages", [])
         if messages and hasattr(messages[-1], "content"):
