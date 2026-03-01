@@ -268,3 +268,57 @@ Browser Context Initialized successfully.
 [MOCK PUBSUB -> f582e452-157b-4530-8432-eb6601e63131] {'type': 'log', 'message': 'Executing Auditor on http://localhost:3000/'}
 [MOCK PUBSUB -> f582e452-157b-4530-8432-eb6601e63131] {'type': 'security_findings', 'summary': 'The findings from the security audit align with common vulnerabilities identified by OWASP, such as Cross-Site Scripting (XSS) and SQL Injection. These vulnerabilities are critical and require immediate attention to secure the application.\n\n### General Remediation Steps\n- **Implement Security Headers**: Add and configure security headers to protect against common web vulnerabilities.\n- **Secure Cookies**: Ensure cookies are set with appropriate flags to enhance security.\n- **Input Validation and Sanitization**: Validate and sanitize all user inputs to prevent injection attacks.\n- **Use HTTPS**: Encrypt data in transit to protect sensitive information.\n- **Restrict URL Redirections**: Validate and limit URL redirections to prevent open redirect vulnerabilities.\n\nBy addressing these issues, the security posture of the application can be significantly improved.', 'findings_count': 19}
 [MOCK PUBSUB -> f582e452-157b-4530-8432-eb6601e63131] {'type': 'status', 'phase': 'Complete', 'message': 'Scan Finished Successfully. Estimated Cost: $0.0643'}
+--- STARTING ORCHESTRATOR FOR JOB ea91193d-f75b-4374-94f3-4b7f684f6c83 ---
+[MOCK PUBSUB -> ea91193d-f75b-4374-94f3-4b7f684f6c83] {'type': 'log', 'message': 'Container Worker (ACA) Started. Initializing Agents...'}
+[MOCK PUBSUB -> ea91193d-f75b-4374-94f3-4b7f684f6c83] {'type': 'log', 'message': 'Starting Browser Context...'}
+Initializing Browser Context...
+Browser Context Initialized successfully.
+[MOCK PUBSUB -> ea91193d-f75b-4374-94f3-4b7f684f6c83] {'type': 'status', 'phase': 'Functional Test'}
+[MOCK PUBSUB -> ea91193d-f75b-4374-94f3-4b7f684f6c83] {'type': 'log', 'message': 'Executing Navigator: 1. Navigate to https://sqasa.co/\n2. navega por todos los menús principales, verifica que funcionan correctamente también verifica que el formulario de contacto funciona correctamente'}
+Job ea91193d-f75b-4374-94f3-4b7f684f6c83 failed: Error code: 429 - {'error': {'message': 'Request too large for gpt-4o in organization org-vLLXPn3byNfZdg7og9V5SfP2 on tokens per min (TPM): Limit 30000, Requested 119890. The input or output tokens must be reduced in order to run successfully. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}
+Traceback (most recent call last):
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\src\quantum_qe_core\api_server.py", line 226, in run_quantum_orchestrator
+    nav_result = await navigator.run(nav_instruction)
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\src\quantum_qe_core\agents\navigator.py", line 69, in run
+    result = await self.agent_graph.ainvoke(inputs)
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langgraph\pregel\main.py", line 3161, in ainvoke
+    async for chunk in self.astream(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langgraph\pregel\main.py", line 2974, in astream
+    async for _ in runner.atick(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langgraph\pregel\_runner.py", line 304, in atick
+    await arun_with_retry(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langgraph\pregel\_retry.py", line 138, in arun_with_retry
+    return await task.proc.ainvoke(task.input, config)
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langgraph\_internal\_runnable.py", line 709, in ainvoke
+    input = await step.ainvoke(input, config, **kwargs)
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langgraph\_internal\_runnable.py", line 466, in ainvoke
+    ret = await coro
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langgraph\prebuilt\chat_agent_executor.py", line 701, in acall_model
+    response = cast(AIMessage, await static_model.ainvoke(model_input, config))  # type: ignore[union-attr]
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langchain_core\runnables\base.py", line 3193, in ainvoke
+    input_ = await coro_with_context(part(), context, create_task=True)
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langchain_core\runnables\base.py", line 5704, in ainvoke
+    return await self.bound.ainvoke(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langchain_core\language_models\chat_models.py", line 425, in ainvoke
+    llm_result = await self.agenerate_prompt(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langchain_core\language_models\chat_models.py", line 1132, in agenerate_prompt
+    return await self.agenerate(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langchain_core\language_models\chat_models.py", line 1090, in agenerate
+    raise exceptions[0]
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langchain_core\language_models\chat_models.py", line 1359, in _agenerate_with_cache
+    result = await self._agenerate(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langchain_openai\chat_models\base.py", line 1634, in _agenerate
+    raise e
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\langchain_openai\chat_models\base.py", line 1627, in _agenerate
+    raw_response = await self.async_client.with_raw_response.create(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\openai\_legacy_response.py", line 381, in wrapped
+    return cast(LegacyAPIResponse[R], await func(*args, **kwargs))
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\openai\resources\chat\completions\completions.py", line 2678, in create
+    return await self._post(
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\openai\_base_client.py", line 1881, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "C:\Users\CarlosAlbertoOcampoO\.gemini\antigravity\scratch\qe-agent-mvp\venv\lib\site-packages\openai\_base_client.py", line 1666, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.RateLimitError: Error code: 429 - {'error': {'message': 'Request too large for gpt-4o in organization org-vLLXPn3byNfZdg7og9V5SfP2 on tokens per min (TPM): Limit 30000, Requested 119890. The input or output tokens must be reduced in order to run successfully. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}
+
+[MOCK PUBSUB -> ea91193d-f75b-4374-94f3-4b7f684f6c83] {'type': 'error', 'message': "Error code: 429 - {'error': {'message': 'Request too large for gpt-4o in organization org-vLLXPn3byNfZdg7og9V5SfP2 on tokens per min (TPM): Limit 30000, Requested 119890. The input or output tokens must be reduced in order to run successfully. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}"}
