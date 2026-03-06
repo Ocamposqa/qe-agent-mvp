@@ -1,6 +1,6 @@
 import asyncio
 from typing import List, Dict, Any
-from langchain_core.tools import Tool
+from langchain_core.tools import Tool  # type: ignore
 
 class SecurityAuditor:
     def __init__(self):
@@ -63,7 +63,7 @@ class SecurityAuditor:
 
     async def active_scan(self, browser_manager):
         """Performs active scanning (fuzzing) on identified inputs."""
-        inputs = await browser_manager.get_input_elements()
+        inputs: list = await browser_manager.get_input_elements()
         if not inputs:
             return
 

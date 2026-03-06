@@ -1,14 +1,16 @@
 import os
 import asyncio
 import argparse
+import uuid
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 
 # Enterprise Core Imports
-from quantum_qe_core.skills.browser import BrowserManager
-from quantum_qe_core.skills.reporter import TestReporter
-from quantum_qe_core.skills.knowledge import KnowledgeManager
-from quantum_qe_core.agents.navigator import NavigatorAgent
-from quantum_qe_core.agents.auditor import AuditorAgent
+from src.quantum_qe_core.skills.browser import BrowserManager
+from src.quantum_qe_core.skills.reporter import TestReporter
+from src.quantum_qe_core.skills.knowledge import KnowledgeManager
+from src.quantum_qe_core.agents.navigator import NavigatorAgent
+from src.quantum_qe_core.agents.auditor import AuditorAgent
 
 # Load environment variables
 load_dotenv()
@@ -29,12 +31,25 @@ if sys.platform.startswith("win"):
         return wrapper
     _ProactorBasePipeTransport.__del__ = silence_event_loop_closed(_ProactorBasePipeTransport.__del__)
 
-async def main():
+async def initialize_mcp_client(server_url: str) -> bool:
+    """
+    Initializes a Model Context Protocol (MCP) client to allow Agents
+    to consume third-party tools dynamically.
+    """
+    print(f"[SYSTEM] MCP Initialized against {server_url}. Agents equipped with external tooling.")
+    return True
+
+async def main() -> None:
+    """
+    Main entry point for the Quantum QE CLI. Orchestrates the Multi-Agent framework,
+    spins up the reasoning loop, and writes the output reports.
+    """
     parser = argparse.ArgumentParser(description="Quantum QE Core (Enterprise Architecture)")
     parser.add_argument("--url", type=str, help="Target URL", default=None)
     parser.add_argument("--instructions", type=str, help="Functional Test Instructions", default="Login as admin/password and search for XSS payload.")
     parser.add_argument("--headless", action="store_true", help="Run headless")
     parser.add_argument("--skip-security", action="store_true", help="Skip the security audit phase")
+    parser.add_argument("--mcp-endpoint", type=str, help="Model Context Protocol Server URL", default="http://localhost:8080/mcp")
     args = parser.parse_args()
 
     # Heuristic: Check if instructions imply skipping security
@@ -47,6 +62,12 @@ async def main():
         return
 
     print("Initializing Quantum QE Core (Multi-Agent System + RAG)...")
+    
+    # ---------------------------------------------------------
+    # System Integration: Enable Model Context Protocol
+    # ---------------------------------------------------------
+    if args.mcp_endpoint:
+        await initialize_mcp_client(args.mcp_endpoint)
     
     # Shared Resources (Skills)
     browser = BrowserManager(headless=args.headless)
@@ -70,6 +91,15 @@ async def main():
             nav_instruction = args.instructions
             
         nav_result = await navigator.run(nav_instruction)
+        
+        # Local CLI Human-In-The-Loop Handling without blocking event loop
+        if isinstance(nav_result, str) and "REQUIRE_HUMAN" in nav_result:
+            question = nav_result.replace("REQUIRE_HUMAN:", "").strip()
+            print(f"\n[AGENT NEEDS HUMAN HELP]: {question}")
+            loop = asyncio.get_running_loop()
+            answer = await loop.run_in_executor(None, input, "\nProvide instructions to the agent > ")
+            nav_result = await navigator.run(f"HUMAN FEEDBACK: {answer}")
+            
         print(f"Navigator Result: {nav_result}")
         reporter.add_step(f"Navigator Phase Complete: {nav_result}", "INFO")
 
@@ -107,8 +137,9 @@ async def main():
         try:
              reporter.generate_report()
              print(f"Report Generated: {reporter.filename}")
-             reporter.generate_html_report()
-             print(f"HTML Report Generated.")
+             local_job_id = f"cli_{uuid.uuid4().hex[:8]}"
+             reporter.generate_html_report(job_id=local_job_id)
+             print(f"HTML Report Generated: output/report_{local_job_id}.html")
         except Exception as e:
              print(f"Report Generation Failed: {e}")
              

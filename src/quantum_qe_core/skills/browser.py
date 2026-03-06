@@ -140,9 +140,9 @@ class BrowserManager:
                      if tag.get(attr):
                          attrs.append(f"{attr}='{tag[attr]}'")
 
-                 # Only include generic containers if they have relevant attributes
+                 # Only include generic containers if they have relevant attributes (omit 'class' to drop style wrappers)
                  if tag.name in ['div', 'span', 'li', 'ul', 'h1', 'h2', 'h3']:
-                     if not any(k in tag.attrs for k in ['id', 'data-testid', 'data-test-id', 'data-cy', 'role', 'onclick', 'class']):
+                     if not any(k in tag.attrs for k in ['id', 'data-testid', 'data-test-id', 'data-cy', 'role', 'onclick']):
                          continue
 
                  text = tag.get_text(strip=True)
@@ -157,6 +157,10 @@ class BrowserManager:
             body_text = soup.body.get_text(separator=' ', strip=True)[:1000] if soup.body else ""
             
             context_text = f"Page Context:\n{body_text}\n\nInteractive Elements:\n" + "\n".join(interactive_elements)
+            
+            # Enforce strict length limits to avoid OpenAI 429 Token Rate Limits (max ~6k tokens)
+            if len(context_text) > 25000:
+                context_text = context_text[:25000] + "\n... [DOM TRUNCATED DUE TO TPM LIMITS]"
             
             return {
                 "text": context_text,

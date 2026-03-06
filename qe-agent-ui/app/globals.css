@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #f3f4f6;
+    /* Light gray */
+    --foreground: #060b29;
+    /* Dark Navy for text */
+    --radius: 0.5rem;
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  overflow: hidden;
+  /* App-like full screen experience */
+}
+
+/* Custom Scrollbar for Telemetry Terminal */
+.terminal-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.terminal-scroll::-webkit-scrollbar-thumb {
+  background: #ffc440;
+  /* Gold */
+  border-radius: 3px;
+}
