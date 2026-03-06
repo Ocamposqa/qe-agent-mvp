@@ -1,6 +1,7 @@
 import os
 import asyncio
 import argparse
+import uuid
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 
@@ -90,6 +91,15 @@ async def main() -> None:
             nav_instruction = args.instructions
             
         nav_result = await navigator.run(nav_instruction)
+        
+        # Local CLI Human-In-The-Loop Handling without blocking event loop
+        if isinstance(nav_result, str) and "REQUIRE_HUMAN" in nav_result:
+            question = nav_result.replace("REQUIRE_HUMAN:", "").strip()
+            print(f"\n[AGENT NEEDS HUMAN HELP]: {question}")
+            loop = asyncio.get_running_loop()
+            answer = await loop.run_in_executor(None, input, "\nProvide instructions to the agent > ")
+            nav_result = await navigator.run(f"HUMAN FEEDBACK: {answer}")
+            
         print(f"Navigator Result: {nav_result}")
         reporter.add_step(f"Navigator Phase Complete: {nav_result}", "INFO")
 
@@ -127,8 +137,9 @@ async def main() -> None:
         try:
              reporter.generate_report()
              print(f"Report Generated: {reporter.filename}")
-             reporter.generate_html_report()
-             print(f"HTML Report Generated.")
+             local_job_id = f"cli_{uuid.uuid4().hex[:8]}"
+             reporter.generate_html_report(job_id=local_job_id)
+             print(f"HTML Report Generated: output/report_{local_job_id}.html")
         except Exception as e:
              print(f"Report Generation Failed: {e}")
              

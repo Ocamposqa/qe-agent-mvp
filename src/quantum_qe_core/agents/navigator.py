@@ -8,18 +8,6 @@ from src.quantum_qe_core.skills.reporter import TestReporter
 
 from langchain_core.tools import tool
 
-@tool
-def ask_human(question: str) -> str:
-    """Ask the human user for help or clarification when you are stuck or need input."""
-    print(f"\n[AGENT ASKS HUMAN]: {question}")
-    # Use real input() to block and wait for user response
-    try:
-        answer = input("> ")
-        return f"User Answer: {answer}"
-    except (EOFError, KeyboardInterrupt):
-        return "User refused to answer (EOF/Interrupt)."
-
-
 class NavigatorAgent:
     """
     NavigatorAgent is responsible for standard Functional QA Testing. It navigates 
@@ -30,7 +18,7 @@ class NavigatorAgent:
         self.browser = browser_manager
         self.reporter = reporter
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0, max_retries=1)
-        self.tools = self.browser.get_tools(self.reporter) + [ask_human]
+        self.tools = self.browser.get_tools(self.reporter)
         self.agent_graph = self._setup_agent()
 
     def _setup_agent(self) -> Any:
@@ -50,7 +38,8 @@ Your goal is to perform functional testing on web applications.
 - Do NOT perform security scanning or active fuzzing. That is the job of the Auditor Agent.
 - Analyze the DOM to understand the page structure.
 - Execute tools sequentially.
-- If you are stuck or encounter a timeout/error, use the 'ask_human' tool to request assistance.
+- If you are stuck, lack context, or encounter an unknown error, DO NOT guess or hallucinate. Instead, immediately STOP and return a final string exactly starting with:
+  "REQUIRE_HUMAN: <your detailed question>"
 """
         model_with_tools = self.llm.bind_tools(self.tools, parallel_tool_calls=False)
         return create_react_agent(model_with_tools, self.tools, prompt=system_message)
