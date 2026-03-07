@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from src.quantum_qe_core.skills.browser import BrowserManager
 from src.quantum_qe_core.skills.reporter import TestReporter
 from src.quantum_qe_core.skills.knowledge import KnowledgeManager
+from src.quantum_qe_core.skills.telemetry_skill import LLMTelemetryHandler
 from src.quantum_qe_core.agents.navigator import NavigatorAgent
 from src.quantum_qe_core.agents.auditor import AuditorAgent
 
@@ -50,6 +51,8 @@ async def main() -> None:
     parser.add_argument("--headless", action="store_true", help="Run headless")
     parser.add_argument("--skip-security", action="store_true", help="Skip the security audit phase")
     parser.add_argument("--mcp-endpoint", type=str, help="Model Context Protocol Server URL", default="http://localhost:8080/mcp")
+    parser.add_argument("--project-id", type=int, help="Project ID for RAG isolation", default=None)
+    parser.add_argument("--supervised", action="store_true", help="Run in Supervised mode (pause on action)")
     args = parser.parse_args()
 
     # Heuristic: Check if instructions imply skipping security
@@ -72,11 +75,12 @@ async def main() -> None:
     # Shared Resources (Skills)
     browser = BrowserManager(headless=args.headless)
     reporter = TestReporter("output/quantum_core_report.pdf")
-    knowledge = KnowledgeManager("quantum_qe_core/knowledge")
+    knowledge = KnowledgeManager("quantum_qe_core/knowledge", project_id=args.project_id)
+    llm_telemetry = LLMTelemetryHandler()
     
     # Initialize Agents
-    navigator = NavigatorAgent(browser, reporter)
-    auditor = AuditorAgent(browser, reporter, knowledge)
+    navigator = NavigatorAgent(browser, reporter, llm_telemetry, supervised=args.supervised)
+    auditor = AuditorAgent(browser, reporter, knowledge, llm_telemetry)
     
     print("Agents Ready: Navigator (UI) & Auditor (AppSec + RAG).")
     
@@ -144,6 +148,12 @@ async def main() -> None:
              print(f"Report Generation Failed: {e}")
              
         await browser.close()
+        
+        network_stats = browser.network_telemetry.get_stats()
+        print(f"\n--- TELEMETRY STATS ---")
+        print(f"Total Tokens: {llm_telemetry.total_tokens}")
+        print(f"Estimated Cost: ${llm_telemetry.get_estimated_cost():.4f}")
+        print(f"Network Downloaded: {network_stats['total_bytes_mb']} MB (Requests: {network_stats['total_requests']})")
         print("Quantum Core Shutdown.")
 
 if __name__ == "__main__":

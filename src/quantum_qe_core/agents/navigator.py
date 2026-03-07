@@ -5,6 +5,8 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage
 from src.quantum_qe_core.skills.browser import BrowserManager
 from src.quantum_qe_core.skills.reporter import TestReporter
+from src.quantum_qe_core.skills.synthetic_data import SyntheticDataAgent
+from src.quantum_qe_core.skills.telemetry_skill import LLMTelemetryHandler
 
 from langchain_core.tools import tool
 
@@ -14,11 +16,16 @@ class NavigatorAgent:
     target URLs, interacts with the DOM (clicking, typing), and validates UI state 
     changes without performing hostile active scanning.
     """
-    def __init__(self, browser_manager: BrowserManager, reporter: Optional[TestReporter] = None) -> None:
+    def __init__(self, browser_manager: BrowserManager, reporter: Optional[TestReporter] = None, llm_telemetry: Optional[LLMTelemetryHandler] = None, supervised: bool = False) -> None:
         self.browser = browser_manager
         self.reporter = reporter
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0, max_retries=1)
-        self.tools = self.browser.get_tools(self.reporter)
+        self.llm_telemetry = llm_telemetry
+        self.synthetic_data = SyntheticDataAgent()
+        self.supervised = supervised
+        
+        callbacks = [self.llm_telemetry] if self.llm_telemetry else []
+        self.llm = ChatOpenAI(model="gpt-4o", temperature=0, max_retries=1, callbacks=callbacks)
+        self.tools = self.browser.get_tools(self.reporter) + self.synthetic_data.get_tools()
         self.agent_graph = self._setup_agent()
 
     def _setup_agent(self) -> Any:
@@ -38,6 +45,14 @@ Your goal is to perform functional testing on web applications.
 - Do NOT perform security scanning or active fuzzing. That is the job of the Auditor Agent.
 - Analyze the DOM to understand the page structure.
 - Execute tools sequentially.
+"""
+        if self.supervised:
+            system_message += """
+- CRITICAL SUPERVISED MODE CONSTRAINT: If ANY tool call returns an error, or if you verify an action failed, you MUST NOT try to fix it or retry. You MUST immediately STOP and return a final string exactly starting with:
+  "REQUIRE_HUMAN: <detailed explanation of the failure>"
+"""
+        else:
+            system_message += """
 - If you are stuck, lack context, or encounter an unknown error, DO NOT guess or hallucinate. Instead, immediately STOP and return a final string exactly starting with:
   "REQUIRE_HUMAN: <your detailed question>"
 """
@@ -56,9 +71,9 @@ Your goal is to perform functional testing on web applications.
         """
         print(f"[NAVIGATOR] Running with instruction: {instruction}")
         inputs = {"messages": [{"role": "user", "content": instruction}]}
-        # Apply Recursion Limit (max 10 steps) and a Hardware Timeout (300 seconds)
+        # Apply Recursion Limit (max 30 steps) and a Hardware Timeout (300 seconds)
         result = await asyncio.wait_for(
-            self.agent_graph.ainvoke(inputs, config={"recursion_limit": 10}),
+            self.agent_graph.ainvoke(inputs, config={"recursion_limit": 30}),
             timeout=300
         )
         

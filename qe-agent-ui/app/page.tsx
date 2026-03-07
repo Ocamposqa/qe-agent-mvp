@@ -20,8 +20,9 @@ export default function CorporateQEDashboard() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [reportUrl, setReportUrl] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [telemetry, setTelemetry] = useState({ tokens: 0, ms: 0 });
+  const [telemetry, setTelemetry] = useState({ tokens: 0, ms: 0, cost: 0, network_mb: 0 });
   const [selectedAgents, setSelectedAgents] = useState<string[]>(["functional"]);
+  const [headless, setHeadless] = useState<boolean>(true);
 
   // HITL State
   const [hitlPrompt, setHitlPrompt] = useState<string | null>(null);
@@ -51,8 +52,8 @@ export default function CorporateQEDashboard() {
       const res = await fetch("http://localhost:8000/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Sending selected agents to the backend (backend implementation pending)
-        body: JSON.stringify({ url, instructions, skip_security: !selectedAgents.includes("security"), headless: true, agents: selectedAgents })
+        // Sending selected agents to the backend
+        body: JSON.stringify({ url, instructions, skip_security: !selectedAgents.includes("security"), headless, agents: selectedAgents })
       });
       const data = await res.json();
 
@@ -102,6 +103,14 @@ export default function CorporateQEDashboard() {
             if (data.phase === "Complete") {
               setStatus("Complete");
               if (data.html_report_url) setReportUrl(data.html_report_url);
+
+              // Simple extraction for MVP telemetry display from final message
+              if (data.message && data.message.includes("Cost:")) {
+                const costMatch = data.message.match(/Cost: \$([\d.]+)/);
+                const networkMatch = data.message.match(/Network: ([\d.]+)MB/);
+                if (costMatch) setTelemetry(prev => ({ ...prev, cost: parseFloat(costMatch[1]) }));
+                if (networkMatch) setTelemetry(prev => ({ ...prev, network_mb: parseFloat(networkMatch[1]) }));
+              }
             }
           } else if (data.type === "hitl_request") {
             // New HITL Event
@@ -167,9 +176,19 @@ export default function CorporateQEDashboard() {
               Open HTML Report
             </button>
           )}
-          <div className="bg-gray-50 border border-gray-100 rounded px-4 py-2 flex flex-col items-end">
-            <span className="text-[10px] text-gray-400 font-bold uppercase">LLM Tokens</span>
-            <span className="font-mono text-[#0032a7] font-bold">{telemetry.tokens.toLocaleString()}</span>
+          <div className="bg-gray-50 border border-gray-100 rounded px-4 py-2 flex items-center gap-6">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-gray-400 font-bold uppercase">LLM Tokens</span>
+              <span className="font-mono text-[#0032a7] font-bold">{telemetry.tokens.toLocaleString()}</span>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-gray-400 font-bold uppercase">Estimated Cost</span>
+              <span className="font-mono text-green-600 font-bold">${telemetry.cost.toFixed(4)}</span>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-gray-400 font-bold uppercase">Network Transfer</span>
+              <span className="font-mono text-purple-600 font-bold">{telemetry.network_mb.toFixed(2)} MB</span>
+            </div>
           </div>
         </div>
       </header>
@@ -198,7 +217,14 @@ export default function CorporateQEDashboard() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-500 mb-1 block">Especialistas Tácticos (MAS)</label>
+              <label className="text-xs font-bold text-gray-500 mb-1 flex justify-between items-center">
+                <span>Especialistas Tácticos (MAS)</span>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-[10px] uppercase font-bold text-gray-400">Headed Mode</span>
+                  <input type="checkbox" checked={!headless} onChange={() => setHeadless(!headless)} className="sr-only peer" />
+                  <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#03287d] relative"></div>
+                </label>
+              </label>
               <div className="grid grid-cols-2 gap-2">
                 {AVAILABLE_AGENTS.map((agent) => {
                   const isSelected = selectedAgents.includes(agent.id);
@@ -322,7 +348,13 @@ export default function CorporateQEDashboard() {
                       "{hitlPrompt || "El agente no está seguro de cómo proceder o le falta información. Por favor, asístelo."}"
                     </p>
 
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2">
+                      <button onClick={() => setHitlReply("Es un Bug en la aplicación. Registralo y cierra el reporte.")} className="bg-red-50 text-red-700 px-3 py-1.5 rounded-md border border-red-200 text-xs font-bold hover:bg-red-100 hover:border-red-300 transition-colors">Es un Bug</button>
+                      <button onClick={() => setHitlReply("El elemento no está en pantalla, intenta hacer scroll o buscar otro selector.")} className="bg-orange-50 text-orange-700 px-3 py-1.5 rounded-md border border-orange-200 text-xs font-bold hover:bg-orange-100 hover:border-orange-300 transition-colors">Selector no visible / Refinar</button>
+                      <button onClick={() => setHitlReply("Reintenta la última acción ejecutada.")} className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-md border border-blue-200 text-xs font-bold hover:bg-blue-100 hover:border-blue-300 transition-colors">Reintentar</button>
+                    </div>
+
+                    <div className="flex gap-2 mt-1">
                       <input
                         value={hitlReply}
                         onChange={(e) => setHitlReply(e.target.value)}

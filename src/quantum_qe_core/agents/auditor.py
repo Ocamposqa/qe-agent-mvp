@@ -7,6 +7,8 @@ from src.quantum_qe_core.skills.browser import BrowserManager
 from src.quantum_qe_core.skills.scanner import SecurityAuditor
 from src.quantum_qe_core.skills.reporter import TestReporter
 from src.quantum_qe_core.skills.knowledge import KnowledgeManager
+from src.quantum_qe_core.skills.synthetic_data import SyntheticDataAgent
+from src.quantum_qe_core.skills.telemetry_skill import LLMTelemetryHandler
 
 class AuditorAgent:
     """
@@ -18,16 +20,21 @@ class AuditorAgent:
         self, 
         browser_manager: BrowserManager, 
         reporter: Optional[TestReporter] = None, 
-        knowledge_manager: Optional[KnowledgeManager] = None
+        knowledge_manager: Optional[KnowledgeManager] = None,
+        llm_telemetry: Optional[LLMTelemetryHandler] = None
     ) -> None:
         self.scanner = SecurityAuditor()
         self.browser = browser_manager
         self.reporter = reporter
         self.knowledge = knowledge_manager
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0, max_retries=1)
+        self.llm_telemetry = llm_telemetry
+        self.synthetic_data = SyntheticDataAgent()
+        
+        callbacks = [self.llm_telemetry] if self.llm_telemetry else []
+        self.llm = ChatOpenAI(model="gpt-4o", temperature=0, max_retries=1, callbacks=callbacks)
         
         # Tools depend on browser manager instance
-        self.tools: List[Any] = self.scanner.get_tools(self.browser)
+        self.tools: List[Any] = self.scanner.get_tools(self.browser) + self.synthetic_data.get_tools()
         if self.knowledge:
             self.tools.extend(self.knowledge.get_tools())
             

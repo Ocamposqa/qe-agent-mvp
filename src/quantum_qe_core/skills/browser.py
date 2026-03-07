@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from langchain_core.tools import Tool
 import uuid
 import os
+from src.quantum_qe_core.skills.telemetry_skill import NetworkTelemetry
 
 class BrowserManager:
     def __init__(self, headless: bool = False):
@@ -13,6 +14,7 @@ class BrowserManager:
         self.headless = headless
         self.logs = []
         self.responses = []
+        self.network_telemetry = NetworkTelemetry()
 
     async def start(self):
         """Initializes the browser instance."""
@@ -40,6 +42,7 @@ class BrowserManager:
                     pass # Ignore errors during capture to avoid noise
 
             self.page.on("response", handle_response)
+            self.page.on("response", self.network_telemetry.handle_response)
 
     async def navigate(self, url: str) -> dict:
         """Navigates to a specific URL and returns the simplified DOM."""

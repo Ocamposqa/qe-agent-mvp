@@ -37,6 +37,7 @@ from src.quantum_qe_core.skills.reporter import TestReporter
 from src.quantum_qe_core.skills.knowledge import KnowledgeManager
 from src.quantum_qe_core.agents.navigator import NavigatorAgent
 from src.quantum_qe_core.agents.auditor import AuditorAgent
+from src.quantum_qe_core.skills.telemetry_skill import LLMTelemetryHandler
 from src.quantum_qe_core.telemetry import log_telemetry  # NEW
 from fastapi.staticfiles import StaticFiles
 
@@ -63,6 +64,8 @@ class ScanRequest(BaseModel):
     instructions: str
     skip_security: bool = False
     headless: bool = True
+    project_id: int | None = None
+    supervised: bool = False
     agents: list[str] = ["functional"]
 
 # --- HITL State Management ---
@@ -200,7 +203,8 @@ async def resume_hitl(job_id: str, request: HitlReply):
     Receives the human's reply from the Next.js UI and unpauses the agent.
     """
     if job_id in HITL_EVENTS:
-        HITL_EVENTS[job_id].set_result(request.reply)
+        future, loop = HITL_EVENTS[job_id]
+        loop.call_soon_threadsafe(future.set_result, request.reply)
         logger.info(f"HITL Resume received for {job_id}: {request.reply}")
         return {"status": "resumed"}
     return {"status": "error", "message": "No active HITL block for this job_id"}
@@ -227,13 +231,19 @@ async def run_quantum_orchestrator(job_id: str, request: ScanRequest):
 
     await broadcast_telemetry(job_id, {"type": "log", "message": "Container Worker (ACA) Started. Initializing Agents..."})
     
+    # Initialize variables for report generation
+    nav_result = "Reporte No Disponible" # Default value for spanish_summary
+    est_cost = 0.0
+    network_stats = {'total_bytes_mb': 0}
+
     try:
         browser = BrowserManager(headless=request.headless)
         reporter = TestReporter(f"output/report_{job_id}.pdf")
-        knowledge = KnowledgeManager("quantum_qe_core/knowledge")
+        knowledge = KnowledgeManager("quantum_qe_core/knowledge", project_id=request.project_id)
+        llm_telemetry = LLMTelemetryHandler()
         
-        navigator = NavigatorAgent(browser, reporter)
-        auditor = AuditorAgent(browser, reporter, knowledge)
+        navigator = NavigatorAgent(browser, reporter, llm_telemetry, supervised=request.supervised)
+        auditor = AuditorAgent(browser, reporter, knowledge, llm_telemetry)
         
         await broadcast_telemetry(job_id, {"type": "log", "message": "Starting Browser Context..."})
         logger.info("Initializing Browser Context...")
@@ -252,9 +262,9 @@ async def run_quantum_orchestrator(job_id: str, request: ScanRequest):
                 # Check for HITL
                 if isinstance(nav_result, str) and "REQUIRE_HUMAN" in nav_result:
                     await broadcast_telemetry(job_id, {"type": "hitl_request", "message": nav_result.replace("REQUIRE_HUMAN:", "").strip()})
-                    HITL_EVENTS[job_id] = asyncio.Future()
+                    HITL_EVENTS[job_id] = (asyncio.Future(), asyncio.get_running_loop())
                     try:
-                        human_reply = await asyncio.wait_for(HITL_EVENTS[job_id], timeout=600.0) # 10 min timeout for human
+                        human_reply = await asyncio.wait_for(HITL_EVENTS[job_id][0], timeout=600.0) # 10 min timeout for human
                         await broadcast_telemetry(job_id, {"type": "log", "message": f"Received Human Instruction: {human_reply}"})
                         # Resume agent with human input
                         nav_result = await navigator.run(f"HUMAN FEEDBACK: {human_reply}")
@@ -299,22 +309,42 @@ async def run_quantum_orchestrator(job_id: str, request: ScanRequest):
         from src.quantum_qe_core.agents.reporter import ReporterAgent
         reporter_agent = ReporterAgent(reporter)
         
+        # Calculate approximate compute time inside this thread
+        import time
+        compute_ms = 25000  # Default MVP mock timer, can be dynamic
+        
+        # Log final telemetry for billing
+        est_cost = log_telemetry(
+            job_id=job_id, 
+            tokens=llm_telemetry.total_tokens, 
+            compute_ms=compute_ms, 
+            project_id=request.project_id
+        )
+        
+        network_stats = browser.network_telemetry.get_stats()
+        telemetry_payload = {
+            "tokens": llm_telemetry.total_tokens,
+            "cost": est_cost,
+            "network_mb": network_stats['total_bytes_mb']
+        }
+
         await broadcast_telemetry(job_id, {"type": "log", "message": "Reporter Agent is consolidating findings and writing the Spanish Executive Summary via LLM."})
-        html_report_path = await reporter_agent.run(job_id)
+        html_report_path = await reporter_agent.run(
+            job_id,
+            agents_executed=request.agents,
+            telemetry_data=telemetry_payload
+        )
         
         await broadcast_telemetry(job_id, {"type": "log", "message": f"Enterprise HTML Report generated locally at: {html_report_path}"})
 
         # Cleanup
         await browser.close()
         
-        # Log final telemetry for billing
-        est_cost = log_telemetry(job_id=job_id, tokens=4350, compute_ms=25000)
-        
         await broadcast_telemetry(job_id, {
             "type": "status", 
             "phase": "Complete", 
             "html_report_url": f"http://localhost:8000/reports/report_{job_id}.html",
-            "message": f"Scan Finished Successfully. Estimated Cost: ${est_cost:.4f}"
+            "message": f"Scan Finished Successfully. Cost: ${est_cost:.4f} | Network: {network_stats['total_bytes_mb']}MB"
         })
         
     except asyncio.TimeoutError:

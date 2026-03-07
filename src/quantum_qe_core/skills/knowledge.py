@@ -2,8 +2,15 @@ import os
 from langchain_core.tools import Tool
 
 class KnowledgeManager:
-    def __init__(self, knowledge_path: str):
+    def __init__(self, knowledge_path: str, project_id: int = None):
         self.knowledge_path = knowledge_path
+        self.project_id = project_id
+        self.search_path = self.knowledge_path
+        
+        if self.project_id is not None:
+            project_path = os.path.join(self.knowledge_path, f"project_{self.project_id}")
+            if os.path.exists(project_path):
+                self.search_path = project_path
 
     def get_tools(self):
         
@@ -11,7 +18,7 @@ class KnowledgeManager:
             """Searches the knowledge base for a query."""
             results = []
             # Simple grep-like search for now
-            for root, _, files in os.walk(self.knowledge_path):
+            for root, _, files in os.walk(self.search_path):
                 for file in files:
                     if file.endswith(".md"):
                         path = os.path.join(root, file)

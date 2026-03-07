@@ -13,7 +13,7 @@ class ReporterAgent:
             api_key=os.getenv("OPENAI_API_KEY")
         )
 
-    async def run(self, job_id: str) -> str:
+    async def run(self, job_id: str, agents_executed: list = None, telemetry_data: dict = None) -> str:
         """
         Consumes the TestReporter data, uses LangChain to write a Spanish summary,
         and generates the final HTML report.
@@ -76,7 +76,12 @@ class ReporterAgent:
         # 3. Generate the Final Report
         # Ensure 'output' directory exists since generate_html_report saves there
         os.makedirs("output", exist_ok=True)
-        self.reporter.generate_html_report(job_id=job_id, spanish_summary=spanish_summary_html)
+        self.reporter.generate_html_report(
+            job_id=job_id, 
+            spanish_summary=spanish_summary_html,
+            agents_executed=agents_executed,
+            telemetry_data=telemetry_data
+        )
         
         # Output filename expected by the reporter method
         html_filename = f"output/report_{job_id}.html"

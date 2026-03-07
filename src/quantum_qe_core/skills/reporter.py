@@ -117,8 +117,10 @@ class TestReporter:
         except Exception as e:
             print(f"Failed to generate report: {e}")
 
-    def generate_html_report(self, job_id: str, spanish_summary: str = ""):
+    def generate_html_report(self, job_id: str, spanish_summary: str = "", agents_executed: list = None, telemetry_data: dict = None):
         """Generates a professional HTML report with Tailwind CSS and Chart.js."""
+        agents_executed = agents_executed or ["functional"]
+        telemetry_data = telemetry_data or {}
         html_filename = f"output/report_{job_id}.html"
         os.makedirs("output", exist_ok=True)
 
@@ -224,7 +226,15 @@ class TestReporter:
 
         <!-- Section 2: Security Audit Report -->
         <h2 class="text-xl font-black text-[#03287d] mb-6 border-l-4 border-[#ffc440] pl-3 uppercase tracking-wider">Security Audit Report</h2>
-        
+"""
+        if "security" not in agents_executed:
+            html_content += """
+        <div class="bg-gray-100 border border-gray-300 rounded-lg p-6 text-center text-gray-500 font-bold mb-12 shadow-sm">
+            Agente Security Auditor no ejecutado para esta misión
+        </div>
+"""
+        else:
+            html_content += """
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             <!-- Passive Scan Column -->
             <div>
@@ -307,6 +317,55 @@ class TestReporter:
         html_content += """
                 </div>
             </div>
+        </div>
+"""
+        
+        # Synthetic Data Section
+        html_content += """
+        <!-- Section 2.5: Synthetic Data -->
+        <h2 class="text-xl font-black text-[#03287d] mb-6 border-l-4 border-purple-500 pl-3 uppercase tracking-wider">Synthetic Data Agent</h2>
+"""
+        if "synthetic" not in agents_executed:
+            html_content += """
+        <div class="bg-gray-100 border border-gray-300 rounded-lg p-6 text-center text-gray-500 font-bold mb-12 shadow-sm">
+            Agente Synthetic Data no ejecutado para esta misión
+        </div>
+"""
+        else:
+            html_content += """
+        <div class="bg-white border border-gray-200 shadow-sm p-6 rounded-lg mb-12">
+            <p class="text-sm text-gray-600">El agente de datos sintéticos generó datos de prueba enrutados a los campos del formulario durante la ejecución.</p>
+        </div>
+"""
+
+        # Telemetry Section
+        html_content += """
+        <!-- Section 2.8: Telemetry Data -->
+        <h2 class="text-xl font-black text-[#03287d] mb-6 border-l-4 border-cyan-500 pl-3 uppercase tracking-wider">Telemetry & Cost Observatory</h2>
+        <div class="grid grid-cols-3 gap-4 mb-12">
+"""
+        if not telemetry_data:
+            html_content += """
+            <div class="col-span-3 bg-gray-100 border border-gray-300 rounded-lg p-6 text-center text-gray-500 font-bold shadow-sm">
+                Agente Telemetry no ejecutado para esta misión
+            </div>
+            """
+        else:
+            html_content += f"""
+            <div class="bg-white border border-gray-200 shadow-sm p-4 rounded-lg text-center">
+                <div class="text-xs text-gray-500 font-bold uppercase">LLM Tokens</div>
+                <div class="text-2xl font-black text-[#0032a7]">{telemetry_data.get('tokens', 0):,}</div>
+            </div>
+            <div class="bg-white border border-gray-200 shadow-sm p-4 rounded-lg text-center">
+                <div class="text-xs text-gray-500 font-bold uppercase">Estimated Cost</div>
+                <div class="text-2xl font-black text-green-600">${telemetry_data.get('cost', 0.0):.4f}</div>
+            </div>
+            <div class="bg-white border border-gray-200 shadow-sm p-4 rounded-lg text-center">
+                <div class="text-xs text-gray-500 font-bold uppercase">Bandwidth</div>
+                <div class="text-2xl font-black text-purple-600">{telemetry_data.get('network_mb', 0.0):.2f} MB</div>
+            </div>
+            """
+        html_content += """
         </div>
 
         <!-- Section 3: Functional Execution Log -->
